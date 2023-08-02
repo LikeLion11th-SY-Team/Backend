@@ -1,0 +1,21 @@
+회원가입 페이지
+<br>
+
+<form action="" method="POST">
+    {% csrf_token %}
+    <p>아이디</p>
+    <input name="username" type="text">
+    <p>비밀번호</p>
+    <input name="password" type="password">
+    <p>비밀번호 확인</p>
+    <input name="password_check" type="password">
+    <p>성</p>
+    <input name="first_name" type="text">
+    <p>이름</p>
+    <input name="last_name" type="text">
+    <p>이메일</p>
+    <input name="email" type="text">
+    <p>전화번호</p>
+    <input name="phone_number" type="text">
+    <input type="submit" value="회원가입">
+</form>
