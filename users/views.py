@@ -1,124 +1,106 @@
-from django.contrib.auth import authenticate,login, logout
-from django.shortcuts import render,redirect
+import jwt
 from .models import User
-from django.http import JsonResponse
-from django.views import View
-import json
-import bcrypt
-
-# FBV ver
-def loginView(request):
-    if request.method=='POST':
-        username = request.POST['username']
-        password = request.POST['password']
-        user = authenticate( username=username, password=password)
-        if user is not None:
-            print("인증성공")
-            login(request,user)
-        else:
-            print("인증실패")
-    return render(request, "users/login_test.html")
-
-def logoutView(request):
-    logout(request)
-
-    #지금은 테스트를 위에 로그인으로, 메인 페이지 나오면 그때 메인페이지로 동작할 듯
-    return redirect("users:login")
-
-def signupView(request):
-    if request.method=='POST':
-        username = request.POST['username']
-        email = request.POST['email']
-        password = request.POST['password']
-        phone_number = request.POST['phone_number']
-        first_name = request.POST['first_name']
-        last_name = request.POST['last_name']
-
-        if User.objects.filter(username=username).exists():
-            return JsonResponse({"message":"Duplicate_UserID"}, status=400)
-        if User.objects.filter(email=email).exists():
-            return JsonResponse({"message":"Duplicate_UserEmail"}, status=400)
-        if not ('@' in email) or not ('.' in email):
-            return JsonResponse({"message":"Enter a valid UserEmail"}, status=400)
-
-        if request.POST['password']==request.POST['password_check']:
-            user = User.objects.create(username=username,email=email,password=password)
-            user.phone_number = phone_number
-            user.first_name = first_name
-            user.last_name = last_name
-            user.save()
-            login(request,user)
-            return render(request, "users/login.html")
-        return render(request,'users/signup_test.html')
-    return render(request, "users/signup_test.html")
+from .jwt_serializers import SpartaTokenObtainPairSerializer,UserModelSerializer
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework import status
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from django.contrib.auth import authenticate
+from django.shortcuts import get_object_or_404
+from config.settings import SECRET_KEY
 
 
+class SpartaTokenObtainPairView(TokenObtainPairView):
+    serializer_class = SpartaTokenObtainPairSerializer
 
-# CBV ver
 # json to json, not render in post
-class SignupView(View):
+class SignupView(APIView):
     def post(self, request):
-        
-        # 밑의 주석 코드는 서버 가동 시 실제로 사용될 코드 (프론트이 json파일을 가져오는 코드)
-        #data = json.loads(request.body)
-        # 밑의 코드는 테스트를 위해 json이 아닌 request 메세지를 그대로 받는 코드
-        data = request.POST
+        serializer_class = UserModelSerializer(data=request.data)
+        if serializer_class.is_valid():
+            user = serializer_class.save()
 
-        try:
-            # 데이터 추출
-            username = data['username']
-            email = data['email']
-            password = bcrypt.hashpw(data['password'].encode('UTF-8'), bcrypt.gensalt()).decode()
-            phone_number = data['phone_number']
-            first_name = data['first_name']
-            last_name = data['last_name']
+            token = SpartaTokenObtainPairSerializer.get_token(user)
+            refresh_token = str(token)
+            access_token = str(token.access_token)
+            return Response(
+                {
+                    "user" : serializer_class.data,
+                    "message": "Signup Success",
+                    "token": {
+                        "access": access_token,
+                        "refresh": refresh_token,
+                    },
+                },
+                status = status.HTTP_200_OK,
+            )
+        return Response(serializer_class.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            ## 비밀번호 및 아이디의 유효성 검사는 프론트엔드에서 하는 것으로 가정
-            # id 중복
-            if User.objects.filter(username=username).exists():
-                return JsonResponse({"message":"Duplicate_UserID"}, status=400)
-            # email 유효성
-            if not ('@' in email) or not ('.' in email):
-                return JsonResponse({"message":"Enter a valid UserEmail"}, status=400)            
-            # email 중복
-            if User.objects.filter(email=email).exists():
-                return JsonResponse({"message":"Duplicate_UserEmail"}, status=400)
-            
-            #정보 전달, 저장
-            user = User.objects.create(username=username,email=email,password=password)
-            user.phone_number = phone_number
-            user.first_name = first_name
-            user.last_name = last_name
-            user.save()
-            
-            #회원가입 후 로그인 유지로 결정난 경우 하단 코드 실행
-            #login(request,user)
-        except KeyError:
-            return JsonResponse({"message":"KEY_ERROR"},status = 400)
-    
+class UserAPIView(APIView):
     def get(self, request):
-        return render(request, "users/signup_test.html")
-    
-class LoginView(View):
+        try:
+            token = request.META.get('HTTP_AUTHORIZATION',False)
+            if token:
+                token = str(token).split()[1].encode("utf-8")
+            access = token
+            payload = jwt.decode(access,SECRET_KEY,algorithms=['HS256'])
+            pk = payload.get('user_id')
+            user = get_object_or_404(User, pk=pk)
+            serializer = UserModelSerializer(instance=user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except(jwt.exceptions.ExpiredSignatureError):
+            # 토큰 만료 시 토큰 갱신
+            data = {'refresh': request.data('refresh', None)}
+            serializer = TokenRefreshSerializer(data=data)
+            if serializer.is_valid(raise_exception=True):
+                access = serializer.data.get('access', None)
+                refresh = serializer.data.get('refresh', None)
+                payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
+                pk = payload.get('user_id')
+                user = get_object_or_404(User, pk=pk)
+                serializer = UserModelSerializer(instance=user)
+                res = Response(serializer.data, status=status.HTTP_200_OK)
+                res.set_cookie('access', access)
+                res.set_cookie('refresh', refresh)
+                return res
+            raise jwt.exceptions.InvalidTokenError
     def post(self, request):
-        
-        # 밑의 주석 코드는 서버 가동 시 실제로 사용될 코드 (프론트이 json파일을 가져오는 코드)
-        #data = json.loads(request.body)
-        # 밑의 코드는 테스트를 위해 json이 아닌 request 메세지를 그대로 받는 코드
-        data = request.POST
-
-        try:
-            username = data['username']
-            password = bcrypt.hashpw(data['password'].encode('UTF-8'), bcrypt.gensalt()).decode()
-            user = authenticate( username=username, password=password)
-            if user is not None:
-                print("인증성공")
-                login(request,user)
-                return JsonResponse({"message":"SUCCESS"} , status = 200)
-            print("인증실패")
-            return JsonResponse({"message":"Wrong ID or Password"} , status = 200)
-        except KeyError:
-            return JsonResponse({"message":"KEY_ERROR"},status = 400)
+        user = authenticate(
+            username=request.data.get("username"), password=request.data.get("password")
+        )
+        # 이미 회원가입 된 유저일 때
+        if user is not None:
+            serializer = UserModelSerializer(user)
+            # jwt 토큰 접근
+            token = SpartaTokenObtainPairSerializer.get_token(user)
+            refresh_token = str(token)
+            access_token = str(token.access_token)
+            return Response(
+                {
+                    "user": serializer.data,
+                    "message": "login success",
+                    "token": {
+                        "access": access_token,
+                        "refresh": refresh_token,
+                    },
+                },
+                status=status.HTTP_200_OK,
+            )
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
     
-    def get(self, request):
-        return render(request, "users/login_test.html")
+    def delete(self, request):
+        return Response({
+            "message": "Logout success"
+            }, status=status.HTTP_202_ACCEPTED)
+    
+    def put(self, request):
+        user = authenticate(
+            username=request.data.get("username"), password=request.data.get("password")
+        )
+        serializer = UserModelSerializer(user, data=request.data) 
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data) 
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

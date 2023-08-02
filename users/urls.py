@@ -1,16 +1,14 @@
 from django.urls import path
-from . import views
+from .views import UserAPIView, SpartaTokenObtainPairView,SignupView
+
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 app_name = "users"
 
 urlpatterns = [
-    # FBV로 단순 request 처리 및 페이지 render 하는 형태
-    path('login/', views.loginView, name='login'),
-    path('logout/', views.logoutView, name='logout'),
-    path('signup/', views.signupView, name='signup'),
-    
-    # CBV로 json 형태로 받아서 POST 시 Json 형태의 response만 응답할 때
-    # POST 요청에서 페이지 render X
-    path('login2/', views.LoginView.as_view()),
-    path('signup2/', views.SignupView.as_view()),
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/sparta/token/',SpartaTokenObtainPairView.as_view(),name='sparta_token'),
+    path('signup/',SignupView.as_view(),name='signup'),
+    path('login/',UserAPIView.as_view(), name='login'),
 ]

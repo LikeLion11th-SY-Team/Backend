@@ -4,7 +4,7 @@ from django.contrib.auth.models import AbstractUser,UserManager as DjangoUserMan
 
 ## 함수 재정의
 class UserManager(DjangoUserManager):
-    def _create_user(self, username, email, password, **extra_fields):
+    def _create_user(self, username, email, password,**extra_fields):
         user = self.model(username=username,email=email,**extra_fields)
         user.set_password(password)
         user.save()
@@ -15,7 +15,7 @@ class UserManager(DjangoUserManager):
         extra_fields.setdefault('is_superuser',False)
         return self._create_user(username,email,password,**extra_fields)
     
-    def create_superuser(self, username, email, password, **extra_fields):
+    def create_superuser(self, username, email, password,**extra_fields):
         extra_fields.setdefault('is_staff',True)
         extra_fields.setdefault('is_superuser',True)
         return self._create_user(username,email,password,**extra_fields)
