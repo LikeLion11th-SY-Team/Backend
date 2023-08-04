@@ -20,10 +20,12 @@ class UserModelSerializer(ModelSerializer):
         fields = '__all__'
     def create(self, validated_data):
         user = User.objects.create_user(
-            username = validated_data['username'],
-            email = validated_data['email'],
-            password = validated_data['password']
+            username = validated_data['id'],
+            email = validated_data['emailId'] + '@' + validated_data['platformAddress'],
+            password = validated_data['pw']
         )
+        user.nick_name = validated_data['nickname']
+        #user.name = validated_data['name']
         user.phone_number = validated_data['phone_number']
         user.save()
         return user

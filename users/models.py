@@ -22,5 +22,7 @@ class UserManager(DjangoUserManager):
     
 # 메인 유저 모델
 class User(AbstractUser):
-    phone_number =models.CharField(verbose_name='phone_number', max_length=11)
+    nick_name = models.CharField(verbose_name='nick_name',max_length=10, null=True,)
+    name = models.CharField(verbose_name='name', max_length=10, null=True)
+    phone_number =models.CharField(verbose_name='phone_number', max_length=11, null=True)
     objects = UserManager()

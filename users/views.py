@@ -1,43 +1,63 @@
 import jwt
+import json
 from .models import User
 from .jwt_serializers import SpartaTokenObtainPairSerializer,UserModelSerializer
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework import status
+from rest_framework.decorators import api_view
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth import authenticate
 from django.shortcuts import get_object_or_404
 from config.settings import SECRET_KEY
+import bcrypt
 
 
 class SpartaTokenObtainPairView(TokenObtainPairView):
     serializer_class = SpartaTokenObtainPairSerializer
 
-# json to json, not render in post
 class SignupView(APIView):
     def post(self, request):
-        serializer_class = UserModelSerializer(data=request.data)
-        if serializer_class.is_valid():
-            user = serializer_class.save()
+        data             = json.loads(request.body)
+        try:
+            phone_number = data['phoneNumber']
+            email        = email=request.data['emailId'] + '@' + request.data['platformAddress']
+            if User.objects.filter(phone_number=phone_number).exists():
+                return Response(
+                    {"message":"Duplicate_PhoneNumber"},
+                    status = status.HTTP_400_BAD_REQUEST
+                )
+            elif User.objects.filter(email=email).exists():
+                return Response(
+                    {"message":"Duplicate_UserEmail"},
+                    status = status.HTTP_400_BAD_REQUEST
+                )
+            else:
+                serializer_class = UserModelSerializer(data=request.data)
+                if serializer_class.is_valid():
+                    user = serializer_class.save()
 
-            token = SpartaTokenObtainPairSerializer.get_token(user)
-            refresh_token = str(token)
-            access_token = str(token.access_token)
-            return Response(
-                {
-                    "user" : serializer_class.data,
-                    "message": "Signup Success",
-                    "token": {
-                        "access": access_token,
-                        "refresh": refresh_token,
-                    },
-                },
-                status = status.HTTP_200_OK,
-            )
-        return Response(serializer_class.errors, status=status.HTTP_400_BAD_REQUEST)
+                    token = SpartaTokenObtainPairSerializer.get_token(user)
+                    refresh_token = str(token)
+                    access_token = str(token.access_token)
+                    return Response(
+                        {
+                            "user" : serializer_class.data,
+                            "message": "Signup Success",
+                            "token": {
+                                "access": access_token,
+                                "refresh": refresh_token,
+                            },
+                        },
+                        status = status.HTTP_200_OK,
+                    )
+                return Response(serializer_class.errors, status=status.HTTP_400_BAD_REQUEST)
+        except KeyError:
+            return Response({"message":"KEY_ERROR"}, status = 400)
 
 class UserAPIView(APIView):
+    # 토큰으로 로그인
     def get(self, request):
         try:
             token = request.META.get('HTTP_AUTHORIZATION',False)
@@ -65,9 +85,10 @@ class UserAPIView(APIView):
                 res.set_cookie('refresh', refresh)
                 return res
             raise jwt.exceptions.InvalidTokenError
+    # id pw 로 로그인
     def post(self, request):
         user = authenticate(
-            username=request.data.get("username"), password=request.data.get("password")
+            username=request.data.get("id"), password=request.data.get("pw")
         )
         # 이미 회원가입 된 유저일 때
         if user is not None:
@@ -89,18 +110,43 @@ class UserAPIView(APIView):
             )
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
-    
+    # 로그아웃
     def delete(self, request):
         return Response({
             "message": "Logout success"
             }, status=status.HTTP_202_ACCEPTED)
     
-    def put(self, request):
-        user = authenticate(
-            username=request.data.get("username"), password=request.data.get("password")
-        )
-        serializer = UserModelSerializer(user, data=request.data) 
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data) 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    #수정필요 
+    # def put(self, request):
+    #     user = authenticate(
+    #         username=request.data.get("username"), password=request.data.get("password")
+    #     )
+    #     serializer = UserModelSerializer(user, data=request.data) 
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data) 
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+## 아이디 중복 api
+@api_view(['POST'])
+def checkDuplicatedID(request):
+    data = json.loads(request.body)
+    if User.objects.filter(username = data['id']).exists():
+        return Response({
+            "message": "Duplicated id"
+            }, status=status.HTTP_400_BAD_REQUEST)
+    return Response({
+        "message": "Accepted"
+        }, status=status.HTTP_200_OK)
+
+## 닉네임 중복 api
+@api_view(['POST'])
+def checkDuplicatedNickname(request):
+    data = json.loads(request.body)
+    if User.objects.filter(nickname = data['nickname']).exists():
+        return Response({
+            "message": "Duplicated id"
+            }, status=status.HTTP_400_BAD_REQUEST)
+    return Response({
+        "message": "Accepted"
+        }, status=status.HTTP_200_OK)
