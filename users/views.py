@@ -1,14 +1,14 @@
 import jwt
 import json
 from .models import User
-from .jwt_serializers import SpartaTokenObtainPairSerializer,UserModelSerializer
+from .jwt_serializers import SpartaTokenObtainPairSerializer,UserModelSerializer,UserSignUpSerializer
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate,logout
 from django.shortcuts import get_object_or_404
 from config.settings import SECRET_KEY
 import bcrypt
@@ -21,29 +21,33 @@ class SignupView(APIView):
     def post(self, request):
         data             = json.loads(request.body)
         try:
-            phone_number = data['phoneNumber']
-            email        = email=request.data['emailId'] + '@' + request.data['platformAddress']
-            if User.objects.filter(phone_number=phone_number).exists():
+            data['username'] = data.pop('id')
+            data['password'] = data.pop('pw')
+            data['nick_name'] = data.pop('nickname')
+            data['email'] = data.pop('fullEmail')
+            data['own_name'] = data.pop('name')
+            data['phone_number'] = data['phoneNumber']
+            phone_number = data['phone_number']
+            email        = data['email']
+            if phone_number != "" and User.objects.filter(phone_number=phone_number).exists():
                 return Response(
                     {"message":"Duplicate_PhoneNumber"},
                     status = status.HTTP_400_BAD_REQUEST
                 )
-            elif User.objects.filter(email=email).exists():
+            elif email != "" and User.objects.filter(email=email).exists():
                 return Response(
                     {"message":"Duplicate_UserEmail"},
                     status = status.HTTP_400_BAD_REQUEST
                 )
             else:
-                serializer_class = UserModelSerializer(data=request.data)
+                serializer_class = UserSignUpSerializer(data=data)
                 if serializer_class.is_valid():
                     user = serializer_class.save()
-
                     token = SpartaTokenObtainPairSerializer.get_token(user)
                     refresh_token = str(token)
                     access_token = str(token.access_token)
                     return Response(
                         {
-                            "user" : serializer_class.data,
                             "message": "Signup Success",
                             "token": {
                                 "access": access_token,
@@ -112,6 +116,7 @@ class UserAPIView(APIView):
             return Response(status=status.HTTP_400_BAD_REQUEST)
     # 로그아웃
     def delete(self, request):
+        logout(request)
         return Response({
             "message": "Logout success"
             }, status=status.HTTP_202_ACCEPTED)
@@ -145,12 +150,11 @@ def checkDuplicatedNickname(request):
     data = json.loads(request.body)
     if User.objects.filter(nickname = data['nickname']).exists():
         return Response({
-            "message": "Duplicated id"
+            "message": "Duplicated nickname"
             }, status=status.HTTP_400_BAD_REQUEST)
     return Response({
         "message": "Accepted"
         }, status=status.HTTP_200_OK)
-
 
 @api_view(['GET'])
 def getNickname(request):

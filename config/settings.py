@@ -181,7 +181,7 @@ ALLOWED_HOSTS = [
 
 # 새로 추가
 AUTH_USER_MODEL = 'users.User'
-
+ACCOUNT_EMAIL_REQUIRED = False
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME' : timedelta(minutes=30),
     'REFRESH_TOKEN_LIFETIME' : timedelta(days=7),
