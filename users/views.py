@@ -192,3 +192,40 @@ def getNickname(request):
                         status=status.HTTP_200_OK
                     )
             raise jwt.exceptions.InvalidTokenError
+        
+@api_view(['GET'])
+def getUserInfo(request):
+    if request.method == 'GET':
+        try:
+            token = request.META.get('HTTP_AUTHORIZATION',False)
+            if token:
+                token = str(token).split()[1].encode("utf-8")
+            access = token
+            payload = jwt.decode(access,SECRET_KEY,algorithms=['HS256'])
+            pk = payload.get('user_id')
+            user = get_object_or_404(User, pk=pk)
+            serializer = UserModelSerializer(instance=user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except(jwt.exceptions.ExpiredSignatureError):
+            # 토큰 만료 시 토큰 갱신
+            data = {'refresh': request.data('refresh', None)}
+            serializer = TokenRefreshSerializer(data=data)
+            if serializer.is_valid(raise_exception=True):
+                access = serializer.data.get('access', None)
+                refresh = serializer.data.get('refresh', None)
+                payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
+                pk = payload.get('user_id')
+                user = get_object_or_404(User, pk=pk)
+                serializer = UserModelSerializer(instance=user)
+                return Response(
+                        {
+                            "userInfo" : serializer.data,
+                            "message": "Success",
+                            "token": {
+                                "access": access,
+                                "refresh": refresh,
+                            },
+                        },
+                        status=status.HTTP_200_OK
+                    )
+            raise jwt.exceptions.InvalidTokenError

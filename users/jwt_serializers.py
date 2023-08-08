@@ -31,7 +31,7 @@ class UserSignUpSerializer(ModelSerializer):
 class UserModelSerializer(ModelSerializer):
     class Meta:
         model = User
-        fields = '__all__'
+        fields = ['username','nick_name','own_name','phone_number','email']
     def create(self, validated_data):
         user = User.objects.create_user(validated_data['username'],validated_data['password'],
             {

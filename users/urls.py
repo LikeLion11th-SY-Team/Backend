@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import UserAPIView, SpartaTokenObtainPairView,SignupView
 from .views import checkDuplicatedID,checkDuplicatedNickname
-from .views import getNickname
+from .views import getNickname,getUserInfo
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 app_name = "users"
@@ -16,4 +16,5 @@ urlpatterns = [
     path('api/check/id/',checkDuplicatedID,name='check_id'),
     path('api/check/nickname/',checkDuplicatedNickname,name='check_Name'),
     path('api/get/nickname/',getNickname,name='get_nickname'),
+    path('api/get/userinfo/',getUserInfo,name='get_userinfo'),
 ]
