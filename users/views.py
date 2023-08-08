@@ -103,7 +103,6 @@ class UserAPIView(APIView):
             access_token = str(token.access_token)
             return Response(
                 {
-                    "user": serializer.data,
                     "message": "login success",
                     "token": {
                         "access": access_token,

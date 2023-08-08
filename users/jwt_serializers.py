@@ -9,8 +9,6 @@ class SpartaTokenObtainPairSerializer(TokenObtainPairSerializer):
         token = super().get_token(user)
         
         token['username'] = user.username
-        token['email'] = user.email
-
         return token
 class UserSignUpSerializer(ModelSerializer):
     class Meta:
@@ -31,7 +29,7 @@ class UserSignUpSerializer(ModelSerializer):
 class UserModelSerializer(ModelSerializer):
     class Meta:
         model = User
-        fields = ['username','nick_name','own_name','phone_number','email']
+        fields = ['username','nick_name','own_name','phone_number','email','is_social']
     def create(self, validated_data):
         user = User.objects.create_user(validated_data['username'],validated_data['password'],
             {

@@ -34,5 +34,7 @@ class User(AbstractUser):
     phone_number =models.CharField("휴대폰 번호", max_length=11, blank=True,default="")
     email = models.EmailField("이메일 주소", null=True,default=None)
     created_at = models.DateTimeField( auto_now_add = True)
+    is_social = models.BooleanField("소셜로그인 유저",default=False)
+    
     REQUIRED_FIELDS = []
     objects = UserManager()
