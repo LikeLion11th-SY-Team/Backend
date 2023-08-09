@@ -35,6 +35,7 @@ class User(AbstractUser):
     email = models.EmailField("이메일 주소", null=True,default=None)
     created_at = models.DateTimeField( auto_now_add = True)
     is_social = models.BooleanField("소셜로그인 유저",default=False)
+    social_id = models.CharField("소셜로그인 ID",max_length=20,default="")
     
     REQUIRED_FIELDS = []
     objects = UserManager()
