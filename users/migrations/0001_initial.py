@@ -25,7 +25,6 @@ class Migration(migrations.Migration):
                 ('is_staff', models.BooleanField(default=False, help_text='Designates whether the user can log into this admin site.', verbose_name='staff status')),
                 ('is_active', models.BooleanField(default=True, help_text='Designates whether this user should be treated as active. Unselect this instead of deleting accounts.', verbose_name='active')),
                 ('date_joined', models.DateTimeField(default=django.utils.timezone.now, verbose_name='date joined')),
-                ('username', models.CharField(max_length=150, null=True, unique=True)),
                 ('nick_name', models.CharField(default='익명', max_length=10, verbose_name='닉네임')),
                 ('phone_number', models.CharField(blank=True, default='', max_length=11, verbose_name='휴대폰 번호')),
                 ('email', models.EmailField(default=None, max_length=254, null=True, verbose_name='이메일 주소')),
