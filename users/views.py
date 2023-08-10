@@ -147,7 +147,7 @@ def checkDuplicatedID(request):
 @api_view(['POST'])
 def checkDuplicatedNickname(request):
     data = json.loads(request.body)
-    if User.objects.filter(nickname = data['nickname']).exists():
+    if User.objects.filter(nick_name = data['nickname']).exists():
         return Response({
             "message": "Duplicated nickname"
             }, status=status.HTTP_400_BAD_REQUEST)
