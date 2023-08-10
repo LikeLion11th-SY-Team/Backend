@@ -96,7 +96,6 @@ class UserAPIView(APIView):
         )
         # 이미 회원가입 된 유저일 때
         if user is not None:
-            serializer = UserModelSerializer(user)
             # jwt 토큰 접근
             token = SpartaTokenObtainPairSerializer.get_token(user)
             refresh_token = str(token)
