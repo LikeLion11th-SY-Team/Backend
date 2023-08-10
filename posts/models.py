@@ -11,6 +11,7 @@ class Post(models.Model):
     view_count = models.IntegerField(default=0)
     category = models.CharField(max_length=10,default='')
     likes = models.ManyToManyField(User,related_name='like_posts',blank=True)
+    #image = models.ImageField(upload_to='post/',default='')
     
     def __str__(self):
         return self.title
