@@ -19,7 +19,6 @@ class UserSignUpSerializer(ModelSerializer):
         user = User.objects.create_user(validated_data['username'],validated_data['password'],
             **{
                 'nick_name': validated_data['nick_name'],
-                'own_name': validated_data['own_name'],
                 'phone_number': validated_data['phone_number'],
                 'email': validated_data['email']
             })
@@ -29,14 +28,4 @@ class UserSignUpSerializer(ModelSerializer):
 class UserModelSerializer(ModelSerializer):
     class Meta:
         model = User
-        fields = ['username','nick_name','own_name','phone_number','email','is_social']
-    def create(self, validated_data):
-        user = User.objects.create_user(validated_data['username'],validated_data['password'],
-            {
-                'nick_name': validated_data['nick_name'],
-                'own_name': validated_data['own_name'],
-                'phone_number': validated_data['phone_number'],
-                'email': validated_data['email']
-            })
-        user.save()
-        return user
+        fields = ['username','nick_name','phone_number','email','is_social']

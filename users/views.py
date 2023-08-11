@@ -25,7 +25,6 @@ class SignupView(APIView):
             data['password'] = data.pop('pw')
             data['nick_name'] = data.pop('nickname')
             data['email'] = data.pop('fullEmail')
-            data['own_name'] = data.pop('name')
             data['phone_number'] = data['phoneNumber']
             phone_number = data['phone_number']
             email        = data['email']
@@ -119,17 +118,6 @@ class UserAPIView(APIView):
             "message": "Logout success"
             }, status=status.HTTP_202_ACCEPTED)
     
-    #수정필요 
-    # def put(self, request):
-    #     user = authenticate(
-    #         username=request.data.get("username"), password=request.data.get("password")
-    #     )
-    #     serializer = UserModelSerializer(user, data=request.data) 
-    #     if serializer.is_valid():
-    #         serializer.save()
-    #         return Response(serializer.data) 
-    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
 ## 아이디 중복 api
 @api_view(['POST'])
 def checkDuplicatedID(request):
@@ -142,7 +130,7 @@ def checkDuplicatedID(request):
         "message": "Accepted"
         }, status=status.HTTP_200_OK)
 
-## 닉네임 중복 api
+## 아이디 중복 api
 @api_view(['POST'])
 def checkDuplicatedNickname(request):
     data = json.loads(request.body)
@@ -154,6 +142,7 @@ def checkDuplicatedNickname(request):
         "message": "Accepted"
         }, status=status.HTTP_200_OK)
 
+## 닉네임 중복 api
 @api_view(['GET'])
 def getNickname(request):
     if request.method == 'GET':
@@ -190,10 +179,10 @@ def getNickname(request):
                         status=status.HTTP_200_OK
                     )
             raise jwt.exceptions.InvalidTokenError
-        
-@api_view(['GET'])
-def getUserInfo(request):
-    if request.method == 'GET':
+
+
+class UserinfoView(APIView):
+    def get(self, request):
         try:
             token = request.META.get('HTTP_AUTHORIZATION',False)
             if token:
@@ -219,6 +208,43 @@ def getUserInfo(request):
                         {
                             "userInfo" : serializer.data,
                             "message": "Success",
+                            "token": {
+                                "access": access,
+                                "refresh": refresh,
+                            },
+                        },
+                        status=status.HTTP_200_OK
+                    )
+            raise jwt.exceptions.InvalidTokenError
+    def patch(self, request):
+        try:
+            token = request.META.get('HTTP_AUTHORIZATION',False)
+            if token:
+                token = str(token).split()[1].encode("utf-8")
+            access = token
+            payload = jwt.decode(access,SECRET_KEY,algorithms=['HS256'])
+            pk = payload.get('user_id')
+            user = get_object_or_404(User, pk=pk)
+            serializer = UserModelSerializer(instance=user,data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except(jwt.exceptions.ExpiredSignatureError):
+            # 토큰 만료 시 토큰 갱신
+            data = {'refresh': request.data('refresh', None)}
+            serializer = TokenRefreshSerializer(data=data)
+            if serializer.is_valid(raise_exception=True):
+                access = serializer.data.get('access', None)
+                refresh = serializer.data.get('refresh', None)
+                payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
+                pk = payload.get('user_id')
+                user = get_object_or_404(User, pk=pk)
+                serializer = UserModelSerializer(instance=user)
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+                return Response(
+                        {
+                            "userInfo" : serializer.data,
                             "token": {
                                 "access": access,
                                 "refresh": refresh,
