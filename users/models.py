@@ -1,28 +1,46 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser,UserManager as DjangoUserManager
-
+from django.contrib.auth.models import AbstractUser,BaseUserManager as DjangoUserManager
+from django.contrib.auth.validators import UnicodeUsernameValidator
 
 ## 함수 재정의
 class UserManager(DjangoUserManager):
-    def _create_user(self, username, email, password,**extra_fields):
-        user = self.model(username=username,email=email,**extra_fields)
+    def _create_user(self, username,password, **extra_fields):
+        print(username)
+        user = self.model(
+            username=username,
+            **extra_fields
+        )
         user.set_password(password)
-        user.save()
+        user.save(using=self._db)
         return user
     
-    def create_user(self,username,email,password,**extra_fields):
+    def create_user(self,username, password,**extra_fields):
+        print(username)
         extra_fields.setdefault('is_staff',False)
         extra_fields.setdefault('is_superuser',False)
-        return self._create_user(username,email,password,**extra_fields)
+        user = self._create_user(username,password,**extra_fields)
+        return user
     
-    def create_superuser(self, username, email, password,**extra_fields):
+    def create_superuser(self, username, password,**extra_fields):
         extra_fields.setdefault('is_staff',True)
         extra_fields.setdefault('is_superuser',True)
-        return self._create_user(username,email,password,**extra_fields)
+        user = self._create_user(username,password,**extra_fields).save()
+        return user
     
 # 메인 유저 모델
 class User(AbstractUser):
-    nick_name = models.CharField(verbose_name='nick_name',max_length=10, null=True,)
-    name = models.CharField(verbose_name='name', max_length=10, null=True)
-    phone_number =models.CharField(verbose_name='phone_number', max_length=11, null=True)
+    username = models.CharField(
+        max_length=150,
+        unique=True,
+        null=True
+    )
+    nick_name = models.CharField("닉네임", max_length=10,default="익명")
+    own_name = models.CharField("회원 이름", max_length=10, blank=True,default="")
+    phone_number =models.CharField("휴대폰 번호", max_length=11, blank=True,default="")
+    email = models.EmailField("이메일 주소", null=True,default=None)
+    created_at = models.DateTimeField( auto_now_add = True)
+    is_social = models.BooleanField("소셜로그인 유저",default=False)
+    social_id = models.CharField("소셜로그인 ID",max_length=20,default="")
+    
+    REQUIRED_FIELDS = []
     objects = UserManager()

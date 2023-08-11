@@ -40,17 +40,23 @@ ALLOWED_HOSTS = ['*']
 # Application definition
 
 INSTALLED_APPS = [
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'django.contrib.sites',
     'django.contrib.staticfiles',
     'login',
     'users',
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.kakao',
 ]
 
 MIDDLEWARE = [
@@ -144,10 +150,38 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+#allauth 
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+)
+SITE_ID = 1
+
+SOCIALACCOUNT_PROVIDERS = {
+    'kakao': {
+        'APP': {
+            'client_id': 'dc6d77371b58fce528a75d2f7504577c',
+            'secret': '',
+            'key': '', 
+        }
+    }
+}
+
+SOCIALACCOUNT_LOGIN_ON_GET = True
+LOGIN_REDIRECT_URL = 'main'  # 수정 필요
+ACCOUNT_LOGOUT_REDIRECT_URL = 'index'  # 수정 필요
+ACCOUNT_LOGOUT_ON_GET = True
+
+ALLOWED_HOSTS = [
+    'port-0-triptopper-f69b2mlhaa9b38.sel4.cloudtype.app',
+    '127.0.0.1',
+    'localhost',
+]
+
 
 # 새로 추가
 AUTH_USER_MODEL = 'users.User'
-
+ACCOUNT_EMAIL_REQUIRED = False
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME' : timedelta(minutes=30),
     'REFRESH_TOKEN_LIFETIME' : timedelta(days=7),
