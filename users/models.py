@@ -35,12 +35,33 @@ class User(AbstractUser):
         null=True
     )
     nick_name = models.CharField("닉네임", max_length=10,default="익명")
-    own_name = models.CharField("회원 이름", max_length=10, blank=True,default="")
     phone_number =models.CharField("휴대폰 번호", max_length=11, blank=True,default="")
     email = models.EmailField("이메일 주소", null=True,default=None)
     created_at = models.DateTimeField( auto_now_add = True)
     is_social = models.BooleanField("소셜로그인 유저",default=False)
     social_id = models.CharField("소셜로그인 ID",max_length=20,default="")
     
+
+    BOOKMARK = 0
+    SIGNUP = 1
+    LOGIN = 2
+    COMMUNITY = 3
+    WRITE = 4
+    COMMUNICATE = 5
+    MYPAGE = 6
+    PROGRESS_CHOICES = [
+        (BOOKMARK, "Bookmark"),
+        (SIGNUP, "Signup"),
+        (LOGIN, "Login"),
+        (COMMUNITY, "Community"),
+        (WRITE, "Write"),
+        (COMMUNICATE, "Communicate"),
+        (MYPAGE,"Mypage"),
+    ]
+    progress = models.IntegerField(
+        choices=PROGRESS_CHOICES,
+        default=BOOKMARK,
+    )
+
     REQUIRED_FIELDS = []
     objects = UserManager()
