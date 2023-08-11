@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 import requests
 from rest_framework_simplejwt.tokens import RefreshToken
-# from .models import User
+from .models import User
 import random
 import string
 
@@ -37,10 +37,11 @@ class KakaoLoginView(APIView):
                 return Response({'refresh': str(refresh), 'access': str(refresh.access_token), "msg": "로그인 성공"}, status=status.HTTP_200_OK)
 
             except User.DoesNotExist:
-                nickname = generate_random_nickname()  # 랜덤 닉네임 생성
+                nick_name = generate_random_nickname()  # 랜덤 닉네임 생성
                 new_user = User.objects.create(
-                    nickname=nickname, 
+                    nick_name=nick_name, 
                     social_id=social_id,  # 카카오 소셜 ID 저장
+                    is_social=True,
                 )
 
                 refresh = RefreshToken.for_user(new_user)
