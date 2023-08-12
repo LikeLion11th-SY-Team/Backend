@@ -34,8 +34,6 @@ SECRET_KEY = env('SECRET_KEY')
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
-
 
 # Application definition
 
@@ -176,6 +174,7 @@ ALLOWED_HOSTS = [
     'port-0-triptopper-f69b2mlhaa9b38.sel4.cloudtype.app',
     '127.0.0.1',
     'localhost',
+    '13.125.121.158'
 ]
 
 
