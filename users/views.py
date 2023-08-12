@@ -63,7 +63,7 @@ class UserAPIView(APIView):
     # 토큰으로 로그인
     def get(self, request):
         try:
-            token = request.META.get('HTTP_AUTHORIZATION',False)
+            token = request.COOKIES.get('access',False)
             if token:
                 token = str(token).split()[1].encode("utf-8")
             access = token
@@ -74,7 +74,7 @@ class UserAPIView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         except(jwt.exceptions.ExpiredSignatureError):
             # 토큰 만료 시 토큰 갱신
-            data = {'refresh': request.data('refresh', None)}
+            data = {'refresh': request.COOKIES.get('refresh', None)}
             serializer = TokenRefreshSerializer(data=data)
             if serializer.is_valid(raise_exception=True):
                 access = serializer.data.get('access', None)
@@ -147,7 +147,7 @@ def checkDuplicatedNickname(request):
 def getNickname(request):
     if request.method == 'GET':
         try:
-            token = request.META.get('HTTP_AUTHORIZATION',False)
+            token = request.COOKIES.get('access',False)
             if token:
                 token = str(token).split()[1].encode("utf-8")
             access = token
@@ -158,7 +158,7 @@ def getNickname(request):
             return Response(serializer.data['nick_name'], status=status.HTTP_200_OK)
         except(jwt.exceptions.ExpiredSignatureError):
             # 토큰 만료 시 토큰 갱신
-            data = {'refresh': request.data('refresh', None)}
+            data = {'refresh': request.COOKIES.get('refresh',False)}
             serializer = TokenRefreshSerializer(data=data)
             if serializer.is_valid(raise_exception=True):
                 access = serializer.data.get('access', None)
@@ -184,7 +184,7 @@ def getNickname(request):
 class UserinfoView(APIView):
     def get(self, request):
         try:
-            token = request.META.get('HTTP_AUTHORIZATION',False)
+            token = request.COOKIE.get('access',False)
             if token:
                 token = str(token).split()[1].encode("utf-8")
             access = token
@@ -195,7 +195,7 @@ class UserinfoView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         except(jwt.exceptions.ExpiredSignatureError):
             # 토큰 만료 시 토큰 갱신
-            data = {'refresh': request.data('refresh', None)}
+            data = {'refresh': request.COOKIE.get('refresh', None)}
             serializer = TokenRefreshSerializer(data=data)
             if serializer.is_valid(raise_exception=True):
                 access = serializer.data.get('access', None)
@@ -218,20 +218,33 @@ class UserinfoView(APIView):
             raise jwt.exceptions.InvalidTokenError
     def patch(self, request):
         try:
-            token = request.META.get('HTTP_AUTHORIZATION',False)
+            token = request.COOKIE.get('access',False)
             if token:
                 token = str(token).split()[1].encode("utf-8")
             access = token
             payload = jwt.decode(access,SECRET_KEY,algorithms=['HS256'])
             pk = payload.get('user_id')
             user = get_object_or_404(User, pk=pk)
-            serializer = UserModelSerializer(instance=user,data=request.data, partial=True)
+            data=request.data
+            phone_number = data['phone_number']
+            email        = data['email']
+            if phone_number != "" and User.objects.filter(phone_number=phone_number).exists():
+                return Response(
+                    {"message":"Duplicate_PhoneNumber"},
+                    status = status.HTTP_400_BAD_REQUEST
+                )
+            elif email != "" and User.objects.filter(email=email).exists():
+                return Response(
+                    {"message":"Duplicate_UserEmail"},
+                    status = status.HTTP_400_BAD_REQUEST
+                )
+            serializer = UserModelSerializer(instance=user,data=data, partial=True)
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         except(jwt.exceptions.ExpiredSignatureError):
             # 토큰 만료 시 토큰 갱신
-            data = {'refresh': request.data('refresh', None)}
+            data = {'refresh': request.COOKIE.get('refresh', None)}
             serializer = TokenRefreshSerializer(data=data)
             if serializer.is_valid(raise_exception=True):
                 access = serializer.data.get('access', None)
