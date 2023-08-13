@@ -14,3 +14,13 @@ class PostCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Post
         field = ("title","category","contents")
+
+class CommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Comment
+        field = ("pk","content","post","commenter","created_at","updated_at")
+
+class CommentCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Comment
+        field = ("content")
