@@ -18,4 +18,5 @@ urlpatterns = [
     path('api/get/nickname/',getNickname,name='get_nickname'),
     path('userinfo/',UserinfoView.as_view(),name='get_userinfo'),
     path('userinfo/changepassword/',changePassword,name='change_password'),
+    path('recovery/id/',changePassword,name='change_password'),
 ]

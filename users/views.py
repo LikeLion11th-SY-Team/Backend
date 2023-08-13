@@ -270,7 +270,7 @@ class UserinfoView(APIView):
 @api_view(['POST']) 
 def changePassword(request):
     try:
-        token = request.META.get('HTTP_AUTHORIZATION',False)
+        token = request.COOKIE.get('access',False)
         if token:
             token = str(token).split()[1].encode("utf-8")
         access = token
@@ -292,7 +292,7 @@ def changePassword(request):
             return Response({"message": "Current password is different"},status=status.HTTP_400_BAD_REQUEST)
     except(jwt.exceptions.ExpiredSignatureError):
         # 토큰 만료 시 토큰 갱신
-        data = {'refresh': request.data('refresh', None)}
+        data = {'refresh': request.COOKIE.get('refresh',None)}
         serializer = TokenRefreshSerializer(data=data)
         if serializer.is_valid(raise_exception=True):
             access = serializer.data.get('access', None)
@@ -330,3 +330,11 @@ def changePassword(request):
                         status=status.HTTP_400_BAD_REQUEST
                     )
         raise jwt.exceptions.InvalidTokenError
+
+@api_view(['POST'])
+def recoveryID(request):
+    pass
+
+@api_view(['POST'])
+def recoveryPassword(request):
+    pass
