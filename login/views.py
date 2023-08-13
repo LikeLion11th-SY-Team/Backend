@@ -34,7 +34,7 @@ class KakaoLoginView(APIView):
         response = requests.post('https://kauth.kakao.com/oauth/token', data={
             'grant_type': 'authorization_code',
             'client_id': 'dc6d77371b58fce528a75d2f7504577c' ,
-            'redirect_uri': 'http://localhost:3000/auth/api/kakao-login',
+            'redirect_uri': 'http://localhost:8000/auth/api/kakao-login/',
             'code': authorization_code,
         })
 
@@ -59,6 +59,7 @@ class KakaoLoginView(APIView):
                         nick_name=nick_name,
                         social_id=social_id,  # 카카오 소셜 ID 저장
                         is_social=True,
+                        username=nick_name,
                     )
 
                     refresh = RefreshToken.for_user(new_user)
