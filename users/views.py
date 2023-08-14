@@ -145,7 +145,7 @@ def checkDuplicatedNickname(request):
         "message": "Accepted"
         }, status=status.HTTP_200_OK)
 
-## 닉네임 중복 api
+## 닉네임 요청
 @api_view(['GET'])
 def getNickname(request):
     if request.method == 'GET':
@@ -269,3 +269,67 @@ class UserinfoView(APIView):
                         status=status.HTTP_200_OK
                     )
             raise jwt.exceptions.InvalidTokenError
+        
+@api_view(['POST']) 
+def changePassword(request):
+    try:
+        token = request.COOKIE.get('access',False)
+        if token:
+            token = str(token).split()[1].encode("utf-8")
+        access = token
+        payload = jwt.decode(access,SECRET_KEY,algorithms=['HS256'])
+        pk = payload.get('user_id')
+        user = get_object_or_404(User, pk=pk)
+
+
+        user_info = json.loads(request.body)
+        current_pw = user_info["current_password"]
+        new_pw = user_info["new_password"]
+
+        if user.check_password(current_pw):
+            user.set_password(new_pw)
+            
+            user.save()
+            return Response({"message": "Password change success"}, status=status.HTTP_200_OK)
+        else: 
+            return Response({"message": "Current password is different"},status=status.HTTP_400_BAD_REQUEST)
+    except(jwt.exceptions.ExpiredSignatureError):
+        # 토큰 만료 시 토큰 갱신
+        data = {'refresh': request.COOKIE.get('refresh',None)}
+        serializer = TokenRefreshSerializer(data=data)
+        if serializer.is_valid(raise_exception=True):
+            access = serializer.data.get('access', None)
+            refresh = serializer.data.get('refresh', None)
+            payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
+            pk = payload.get('user_id')
+            user = get_object_or_404(User, pk=pk)
+
+            user_info = json.loads(request.body)
+            current_pw = user_info["current_password"]
+            new_pw = user_info["new_password"]
+
+            if user.check_password(current_pw):
+                user.set_password(new_pw)
+                user.save()
+                return Response(
+                        {
+                            "message": "Password change success",
+                            "token": {
+                                "access": access,
+                                "refresh": refresh,
+                            }
+                        },
+                        status=status.HTTP_200_OK
+                    )
+            else: 
+                return Response(
+                        {
+                            "message": "Current password is different",
+                            "token": {
+                                "access": access,
+                                "refresh": refresh,
+                            }
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+        raise jwt.exceptions.InvalidTokenError
