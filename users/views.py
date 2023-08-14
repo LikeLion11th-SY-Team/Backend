@@ -65,7 +65,7 @@ class UserAPIView(APIView):
         try:
             token = request.COOKIES.get('access',False)
             if token:
-                token = str(token).split()[1].encode("utf-8")
+                token = str(token).encode("utf-8")
             access = token
             payload = jwt.decode(access,SECRET_KEY,algorithms=['HS256'])
             pk = payload.get('user_id')
@@ -114,9 +114,12 @@ class UserAPIView(APIView):
     # 로그아웃
     def delete(self, request):
         logout(request)
-        return Response({
+        res =  Response({
             "message": "Logout success"
             }, status=status.HTTP_202_ACCEPTED)
+        res.delete_cookie('access')
+        res.delete_cookie('refresh')
+        return res
     
 ## 아이디 중복 api
 @api_view(['POST'])
@@ -149,7 +152,7 @@ def getNickname(request):
         try:
             token = request.COOKIES.get('access',False)
             if token:
-                token = str(token).split()[1].encode("utf-8")
+                token = str(token).encode("utf-8")
             access = token
             payload = jwt.decode(access,SECRET_KEY,algorithms=['HS256'])
             pk = payload.get('user_id')
@@ -186,7 +189,7 @@ class UserinfoView(APIView):
         try:
             token = request.COOKIE.get('access',False)
             if token:
-                token = str(token).split()[1].encode("utf-8")
+                token = str(token).encode("utf-8")
             access = token
             payload = jwt.decode(access,SECRET_KEY,algorithms=['HS256'])
             pk = payload.get('user_id')
@@ -220,7 +223,7 @@ class UserinfoView(APIView):
         try:
             token = request.COOKIE.get('access',False)
             if token:
-                token = str(token).split()[1].encode("utf-8")
+                token = str(token).encode("utf-8")
             access = token
             payload = jwt.decode(access,SECRET_KEY,algorithms=['HS256'])
             pk = payload.get('user_id')
