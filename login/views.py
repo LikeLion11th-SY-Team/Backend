@@ -12,9 +12,14 @@ import string
 # KAKAO_REDIRECT_URI = config('KAKAO_REDIRECT_URI')
 
 def generate_random_nickname():
-    # 랜덤한 문자열을 생성하여 닉네임으로 사용
-    letters = string.ascii_letters
-    random_nickname = ''.join(random.choice(letters) for i in range(6))  # 6자리 랜덤 닉네임 생성
+
+    adjectives = ["큰", "작은", "빠른", "느린", "똑똑한", "멋진", "화려한", "창의적인", "밝은", "어두운","고독한", "상실감 있는", "비참한", "창피한", "냉정한"]
+    nouns = ["마법사", "전사", "마법", "공룡", "물고기", "별", "우주", "꽃", "나무", "사자","행운", "힘", "감동", "희망"]
+
+    random_adjective = random.choice(adjectives)
+    random_noun = random.choice(nouns)
+    
+    random_nickname = f"{random_adjective}{random_noun}" 
     return random_nickname
 
 class KakaoLoginView(APIView):
