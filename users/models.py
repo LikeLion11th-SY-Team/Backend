@@ -32,7 +32,7 @@ class User(AbstractUser):
     username = models.CharField(
         max_length=150,
         unique=True,
-        null=True
+        null=True,
     )
     nick_name = models.CharField("닉네임", max_length=10,default="익명")
     phone_number =models.CharField("휴대폰 번호", max_length=11, blank=True,default="")
