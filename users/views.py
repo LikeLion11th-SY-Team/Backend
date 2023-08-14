@@ -44,10 +44,12 @@ class SignupView(APIView):
                     token = SpartaTokenObtainPairSerializer.get_token(user)
                     refresh_token = str(token)
                     access_token = str(token.access_token)
-                    res =  Response({"message": "Signup Success"},status = status.HTTP_200_OK)
-                    res.set_cookie(key='access', value=access_token, httponly=True)
-                    res.set_cookie(key='refresh', value=refresh_token, httponly=True)
-                    return res
+                    return Response({
+                            "message": "Signup Success",
+                            "access":access_token,
+                            "refresh":refresh_token
+                        },
+                        status = status.HTTP_200_OK)
                 return Response(serializer_class.errors, status=status.HTTP_400_BAD_REQUEST)
         except KeyError:
             return Response({"message":"KEY_ERROR"}, status = 400)
@@ -76,10 +78,15 @@ class UserAPIView(APIView):
                 pk = payload.get('user_id')
                 user = get_object_or_404(User, pk=pk)
                 serializer = UserModelSerializer(instance=user)
-                res = Response(serializer.data, status=status.HTTP_200_OK)
-                res.set_cookie('access', access)
-                res.set_cookie('refresh', refresh)
-                return res
+                return Response(
+                            serializer.data,
+                            {
+                                "token":{
+                                    "access":access,
+                                    "refresh":refresh
+                                }
+                            },
+                            status = status.HTTP_200_OK)
             raise jwt.exceptions.InvalidTokenError
     # id pw 로 로그인
     def post(self, request):
@@ -92,9 +99,13 @@ class UserAPIView(APIView):
             token = SpartaTokenObtainPairSerializer.get_token(user)
             refresh_token = str(token)
             access_token = str(token.access_token)
-            res =  Response({"message": "Signup Success"},status = status.HTTP_200_OK)
-            res.set_cookie(key='access', value=access_token, httponly=True)
-            res.set_cookie(key='refresh', value=refresh_token, httponly=True)
+            res =  Response({
+                    "message": "Login Success",
+                    "token":{
+                        "access":access_token,
+                        "refresh":refresh_token
+                    }
+                    },status = status.HTTP_200_OK)
             return res
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -161,11 +172,13 @@ def getNickname(request):
                         {
                             "nickname" : serializer.data['nick_name'],
                             "message": "Success",
+                            "token":{
+                                "access":access,
+                                "refresh":refresh
+                            }
                         },
                         status=status.HTTP_200_OK
                     )
-                res.set_cookie(key='access', value=access, httponly=True)
-                res.set_cookie(key='refresh', value=refresh, httponly=True)
                 return res
             raise jwt.exceptions.InvalidTokenError
 
@@ -173,7 +186,7 @@ def getNickname(request):
 class UserinfoView(APIView):
     def get(self, request):
         try:
-            token = request.COOKIE.get('access',False)
+            token = request.COOKIES.get('access',False)
             if token:
                 token = str(token).encode("utf-8")
             access = token
@@ -184,7 +197,7 @@ class UserinfoView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         except(jwt.exceptions.ExpiredSignatureError):
             # 토큰 만료 시 토큰 갱신
-            data = {'refresh': request.COOKIE.get('refresh', None)}
+            data = {'refresh': request.COOKIES.get('refresh', None)}
             serializer = TokenRefreshSerializer(data=data)
             if serializer.is_valid(raise_exception=True):
                 access = serializer.data.get('access', None)
@@ -197,16 +210,18 @@ class UserinfoView(APIView):
                         {
                             "userInfo" : serializer.data,
                             "message": "Success",
+                            "token":{
+                                "access":access,
+                                "refresh":refresh
+                            }
                         },
                         status=status.HTTP_200_OK
                     )
-                res.set_cookie(key='access', value=access, httponly=True)
-                res.set_cookie(key='refresh', value=refresh, httponly=True)
                 return res
             raise jwt.exceptions.InvalidTokenError
     def patch(self, request):
         try:
-            token = request.COOKIE.get('access',False)
+            token = request.COOKIES.get('access',False)
             if token:
                 token = str(token).encode("utf-8")
             access = token
@@ -232,7 +247,7 @@ class UserinfoView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         except(jwt.exceptions.ExpiredSignatureError):
             # 토큰 만료 시 토큰 갱신
-            data = {'refresh': request.COOKIE.get('refresh', None)}
+            data = {'refresh': request.COOKIES.get('refresh', None)}
             serializer = TokenRefreshSerializer(data=data)
             if serializer.is_valid(raise_exception=True):
                 access = serializer.data.get('access', None)
@@ -246,18 +261,20 @@ class UserinfoView(APIView):
                 res = Response(
                         {
                             "userInfo" : serializer.data,
+                            "token":{
+                                "access":access,
+                                "refresh":refresh
+                            }
                         },
                         status=status.HTTP_200_OK
                     )
-                res.set_cookie(key='access', value=access, httponly=True)
-                res.set_cookie(key='refresh', value=refresh, httponly=True)
                 return res
             raise jwt.exceptions.InvalidTokenError
         
 @api_view(['POST']) 
 def changePassword(request):
     try:
-        token = request.COOKIE.get('access',False)
+        token = request.COOKIES.get('access',False)
         if token:
             token = str(token).encode("utf-8")
         access = token
@@ -279,7 +296,7 @@ def changePassword(request):
             return Response({"message": "Current password is different"},status=status.HTTP_400_BAD_REQUEST)
     except(jwt.exceptions.ExpiredSignatureError):
         # 토큰 만료 시 토큰 갱신
-        data = {'refresh': request.COOKIE.get('refresh',None)}
+        data = {'refresh': request.COOKIES.get('refresh',None)}
         serializer = TokenRefreshSerializer(data=data)
         if serializer.is_valid(raise_exception=True):
             access = serializer.data.get('access', None)
@@ -297,29 +314,33 @@ def changePassword(request):
                 user.save()
                 res = Response(
                         {
-                            "message": "Password change success"
+                            "message": "Password change success",
+                            "token":{
+                                "access":access,
+                                "refresh":refresh
+                            }
                         },
                         status=status.HTTP_200_OK
                     )
-                res.set_cookie(key='access', value=access, httponly=True)
-                res.set_cookie(key='refresh', value=refresh, httponly=True)
                 return res
             else: 
                 res = Response(
                         {
-                            "message": "Current password is different"
+                            "message": "Current password is different",
+                            "token":{
+                                "access":access,
+                                "refresh":refresh
+                            }
                         },
                         status=status.HTTP_400_BAD_REQUEST
                     )
-                res.set_cookie(key='access', value=access, httponly=True)
-                res.set_cookie(key='refresh', value=refresh, httponly=True)
                 return res
         raise jwt.exceptions.InvalidTokenError
 
 @api_view(['GET'])
 def myPost(request):
     try:
-        token = request.COOKIE.get('access',False)
+        token = request.COOKIES.get('access',False)
         if token:
             token = str(token).encode("utf-8")
         access = token
@@ -332,7 +353,7 @@ def myPost(request):
         
     except(jwt.exceptions.ExpiredSignatureError):
         # 토큰 만료 시 토큰 갱신
-        data = {'refresh': request.COOKIE.get('refresh',None)}
+        data = {'refresh': request.COOKIES.get('refresh',None)}
         serializer = TokenRefreshSerializer(data=data)
         if serializer.is_valid(raise_exception=True):
             access = serializer.data.get('access', None)
@@ -344,16 +365,23 @@ def myPost(request):
             
             #여기에 Post.object.filter(writer=user) 등의 코드
             # Response 에도 추가
-            res = Response({"message": "Success"},status=status.HTTP_200_OK)
-            res.set_cookie(key='access', value=access, httponly=True)
-            res.set_cookie(key='refresh', value=refresh, httponly=True)
+            res = Response(
+                    {
+                        "message": "Success",
+                        "token":{
+                            "access":access,
+                            "refresh":refresh
+                        }
+                    },
+                    status=status.HTTP_200_OK
+                )
             return res
         raise jwt.exceptions.InvalidTokenError
 
 @api_view(['GET'])
 def myComment(request):
     try:
-        token = request.COOKIE.get('access',False)
+        token = request.COOKIES.get('access',False)
         if token:
             token = str(token).encode("utf-8")
         access = token
@@ -366,7 +394,7 @@ def myComment(request):
         
     except(jwt.exceptions.ExpiredSignatureError):
         # 토큰 만료 시 토큰 갱신
-        data = {'refresh': request.COOKIE.get('refresh',None)}
+        data = {'refresh': request.COOKIES.get('refresh',None)}
         serializer = TokenRefreshSerializer(data=data)
         if serializer.is_valid(raise_exception=True):
             access = serializer.data.get('access', None)
@@ -378,16 +406,23 @@ def myComment(request):
             
             #여기에 Comment.object.filter(writer=user) 등의 코드
             # Response 에도 추가
-            res = Response({"message": "Success"},status=status.HTTP_200_OK)
-            res.set_cookie(key='access', value=access, httponly=True)
-            res.set_cookie(key='refresh', value=refresh, httponly=True)
+            res = Response(
+                    {
+                        "message": "Success",
+                        "token":{
+                            "access":access,
+                            "refresh":refresh
+                        }
+                    },
+                    status=status.HTTP_200_OK
+                )
             return res
         raise jwt.exceptions.InvalidTokenError
     
 @api_view(['GET'])
 def myLike(request):
     try:
-        token = request.COOKIE.get('access',False)
+        token = request.COOKIES.get('access',False)
         if token:
             token = str(token).encode("utf-8")
         access = token
@@ -400,7 +435,7 @@ def myLike(request):
         
     except(jwt.exceptions.ExpiredSignatureError):
         # 토큰 만료 시 토큰 갱신
-        data = {'refresh': request.COOKIE.get('refresh',None)}
+        data = {'refresh': request.COOKIES.get('refresh',None)}
         serializer = TokenRefreshSerializer(data=data)
         if serializer.is_valid(raise_exception=True):
             access = serializer.data.get('access', None)
@@ -412,8 +447,15 @@ def myLike(request):
             
             #여기에 Post.object.filter(like.fileter(user)) 등의 코드
             # Response 에도 추가
-            res = Response({"message": "Success"},status=status.HTTP_200_OK)
-            res.set_cookie(key='access', value=access, httponly=True)
-            res.set_cookie(key='refresh', value=refresh, httponly=True)
+            res = Response(
+                    {
+                        "message": "Success",
+                        "token":{
+                            "access":access,
+                            "refresh":refresh
+                        }
+                    },
+                    status=status.HTTP_200_OK
+                )
             return res
         raise jwt.exceptions.InvalidTokenError
