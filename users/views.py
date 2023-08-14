@@ -330,11 +330,3 @@ def changePassword(request):
                         status=status.HTTP_400_BAD_REQUEST
                     )
         raise jwt.exceptions.InvalidTokenError
-
-@api_view(['POST'])
-def recoveryID(request):
-    pass
-
-@api_view(['POST'])
-def recoveryPassword(request):
-    pass
