@@ -1,5 +1,5 @@
 import jwt
-import json
+import json, string, random
 from .models import User
 from .jwt_serializers import SpartaTokenObtainPairSerializer,UserModelSerializer,UserSignUpSerializer
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
@@ -10,9 +10,12 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth import authenticate,logout
 from django.shortcuts import get_object_or_404
-from config.settings import SECRET_KEY
+from django.core.mail import EmailMessage
+from config.settings import SECRET_KEY,EMAIL_HOST_USER
 from posts.models import Post,Comment
 from posts.serializers import PostListSerializer,CommentListSerializer
+
+
 
 class SpartaTokenObtainPairView(TokenObtainPairView):
     serializer_class = SpartaTokenObtainPairSerializer
@@ -100,7 +103,16 @@ class UserAPIView(APIView):
             token = SpartaTokenObtainPairSerializer.get_token(user)
             refresh_token = str(token)
             access_token = str(token.access_token)
-            res =  Response({
+            if user.is_reseted:
+                res =  Response({
+                    "message": "Login Success, Password Reset Required",
+                    "token":{
+                        "access":access_token,
+                        "refresh":refresh_token
+                    }
+                    },status = status.HTTP_200_OK)
+            else:
+                res =  Response({
                     "message": "Login Success",
                     "token":{
                         "access":access_token,
@@ -290,7 +302,7 @@ def changePassword(request):
 
         if user.check_password(current_pw):
             user.set_password(new_pw)
-            
+            user.is_reseted = False
             user.save()
             return Response({"message": "Password change success"}, status=status.HTTP_200_OK)
         else: 
@@ -494,3 +506,52 @@ def myLikes(request):
                 status=status.HTTP_200_OK
             )
         raise jwt.exceptions.InvalidTokenError
+
+class ForgetIDView(APIView):
+    def get(self, request):
+        pass
+    def post(self, request):
+        email = json.loads(request.body)['email']
+        user = User.objects.get(email = email)
+        if user is not None:
+            method_email = EmailMessage(
+                'Your ID is in the email',
+                str(user.username),
+                EMAIL_HOST_USER,
+                [email],
+            )
+            method_email.send(fail_silently=False)
+            return Response(status=status.HTTP_200_OK)
+        else:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+def randomConfirmKey():
+    string_pool = string.ascii_letters+string.digits
+    result = "" # 결과 값
+    for i in range(16) :
+        # 랜덤한 하나의 숫자를 뽑아서, 문자열 결합을 한다.
+        result += random.choice(string_pool)
+    return result
+
+class ForgetPasswordView(APIView):
+    def get(self, request):
+        pass
+    def post(self, request):
+        email = json.loads(request.body)['email']
+        username = json.loads(request.body)['username']
+        user = User.objects.get(email = email,username=username)
+        randomPW = randomConfirmKey()
+        if user is not None:
+            method_email = EmailMessage(
+                'Your tmp Password is in the email',
+                randomPW,
+                EMAIL_HOST_USER,
+                [email],
+            )
+            method_email.send(fail_silently=False)
+            user.is_reseted = True
+            user.set_password(randomPW)
+            user.save()
+            return Response(status=status.HTTP_200_OK)
+        else:
+            return Response(status=status.HTTP_404_NOT_FOUND)
