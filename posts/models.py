@@ -10,7 +10,7 @@ class Post(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     view_count = models.IntegerField(default=0)
     category = models.CharField(max_length=10,default='')
-    likes = models.ManyToManyField(User,related_name='like_posts',blank=True)
+    likes = models.ManyToManyField(User,related_name='like_posts',blank=True,through='Like')
     #image = models.ImageField(upload_to='post/',default='')
     
     def __str__(self):
@@ -24,3 +24,7 @@ class Comment(models.Model):
     commenter = models.ForeignKey(to=User,on_delete=models.CASCADE)
     def __str__(self):
         return self.content
+
+class Like(models.Model):
+    post = models.ForeignKey('Post',on_delete=models.CASCADE)
+    user = models.ForeignKey(User,on_delete=models.CASCADE)

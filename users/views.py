@@ -11,7 +11,8 @@ from rest_framework.response import Response
 from django.contrib.auth import authenticate,logout
 from django.shortcuts import get_object_or_404
 from config.settings import SECRET_KEY
-
+from posts.models import Post,Comment
+from posts.serializers import PostListSerializer,CommentListSerializer
 
 class SpartaTokenObtainPairView(TokenObtainPairView):
     serializer_class = SpartaTokenObtainPairSerializer
@@ -338,7 +339,7 @@ def changePassword(request):
         raise jwt.exceptions.InvalidTokenError
 
 @api_view(['GET'])
-def myPost(request):
+def myPosts(request):
     try:
         token = request.COOKIES.get('access',False)
         if token:
@@ -347,9 +348,20 @@ def myPost(request):
         payload = jwt.decode(access,SECRET_KEY,algorithms=['HS256'])
         pk = payload.get('user_id')
         user = get_object_or_404(User, pk=pk)
-        #여기에 Post.object.filter(writer=user) 등의 코드
-        # Response 에도 추가
-        return Response({"message": "Success"}, status=status.HTTP_200_OK)
+        mypost_list = Post.objects.filter(writer=user)
+        myposts = []
+        for post in mypost_list:
+            myposts.append(PostListSerializer(instance=post).data)
+            myposts[-1].pop('writer')
+            myposts[-1].pop('likes')
+        return Response(
+            {
+                "message": "Success",
+                'myposts': myposts
+            },
+            status=status.HTTP_200_OK
+        )
+
         
     except(jwt.exceptions.ExpiredSignatureError):
         # 토큰 만료 시 토큰 갱신
@@ -362,24 +374,23 @@ def myPost(request):
             pk = payload.get('user_id')
             user = get_object_or_404(User, pk=pk)
 
-            
-            #여기에 Post.object.filter(writer=user) 등의 코드
-            # Response 에도 추가
-            res = Response(
-                    {
-                        "message": "Success",
-                        "token":{
-                            "access":access,
-                            "refresh":refresh
-                        }
+            myposts = Post.objects.filter(writer=user)
+
+            return Response(
+                {
+                    "message": "Success",
+                    "token":{
+                        "access":access,
+                        "refresh":refresh
                     },
-                    status=status.HTTP_200_OK
-                )
-            return res
+                    "myposts": myposts
+                }, 
+                status=status.HTTP_200_OK
+            )
         raise jwt.exceptions.InvalidTokenError
 
 @api_view(['GET'])
-def myComment(request):
+def myComments(request):
     try:
         token = request.COOKIES.get('access',False)
         if token:
@@ -388,9 +399,20 @@ def myComment(request):
         payload = jwt.decode(access,SECRET_KEY,algorithms=['HS256'])
         pk = payload.get('user_id')
         user = get_object_or_404(User, pk=pk)
-        #여기에 Comment.object.filter(writer=user) 등의 코드
-        # Response 에도 추가
-        return Response({"message": "Success"}, status=status.HTTP_200_OK)
+        mycomment_list = Comment.objects.filter(commenter=user)
+        mycomments = []
+        for comment in mycomment_list:
+            mycomments.append(CommentListSerializer(instance=comment).data)
+            mycomments[-1].pop('commenter')
+            mycomments[-1].pop('post')
+        return Response(
+            {
+                "message": "Success",
+                'mycomments': mycomments
+            },
+            status=status.HTTP_200_OK
+        )
+
         
     except(jwt.exceptions.ExpiredSignatureError):
         # 토큰 만료 시 토큰 갱신
@@ -403,24 +425,24 @@ def myComment(request):
             pk = payload.get('user_id')
             user = get_object_or_404(User, pk=pk)
 
-            
-            #여기에 Comment.object.filter(writer=user) 등의 코드
-            # Response 에도 추가
-            res = Response(
-                    {
-                        "message": "Success",
-                        "token":{
-                            "access":access,
-                            "refresh":refresh
-                        }
+            myposts = Post.objects.filter(writer=user)
+
+            return Response(
+                {
+                    "message": "Success",
+                    "token":{
+                        "access":access,
+                        "refresh":refresh
                     },
-                    status=status.HTTP_200_OK
-                )
-            return res
+                    "myposts": myposts
+                }, 
+                status=status.HTTP_200_OK
+            )
         raise jwt.exceptions.InvalidTokenError
+
     
 @api_view(['GET'])
-def myLike(request):
+def myLikes(request):
     try:
         token = request.COOKIES.get('access',False)
         if token:
@@ -429,9 +451,20 @@ def myLike(request):
         payload = jwt.decode(access,SECRET_KEY,algorithms=['HS256'])
         pk = payload.get('user_id')
         user = get_object_or_404(User, pk=pk)
-        #여기에 Post.object.filter(like.fileter(user)) 등의 코드
-        # Response 에도 추가
-        return Response({"message": "Success"}, status=status.HTTP_200_OK)
+        likepost_list = user.post_set.all()
+        likeposts = []
+        for post in likepost_list:
+            likeposts.append(PostListSerializer(instance=post).data)
+            likeposts[-1].pop('writer')
+            likeposts[-1].pop('likes')
+        return Response(
+            {
+                "message": "Success",
+                'likeposts': likeposts
+            },
+            status=status.HTTP_200_OK
+        )
+
         
     except(jwt.exceptions.ExpiredSignatureError):
         # 토큰 만료 시 토큰 갱신
@@ -443,19 +476,21 @@ def myLike(request):
             payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
             pk = payload.get('user_id')
             user = get_object_or_404(User, pk=pk)
-
-            
-            #여기에 Post.object.filter(like.fileter(user)) 등의 코드
-            # Response 에도 추가
-            res = Response(
-                    {
-                        "message": "Success",
-                        "token":{
-                            "access":access,
-                            "refresh":refresh
-                        }
+            likepost_list = user.post_set.all()
+            likeposts = []
+            for post in likepost_list:
+                likeposts.append(PostListSerializer(instance=post).data)
+                likeposts[-1].pop('writer')
+                likeposts[-1].pop('likes')
+            return Response(
+                {
+                    "message": "Success",
+                    "token":{
+                        "access":access,
+                        "refresh":refresh
                     },
-                    status=status.HTTP_200_OK
-                )
-            return res
+                    'likeposts': likeposts
+                },
+                status=status.HTTP_200_OK
+            )
         raise jwt.exceptions.InvalidTokenError
