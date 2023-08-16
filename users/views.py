@@ -1,21 +1,33 @@
 import jwt
-import json
+import json, string, random
 from .models import User
 from .jwt_serializers import SpartaTokenObtainPairSerializer,UserModelSerializer,UserSignUpSerializer
-from rest_framework_simplejwt.serializers import TokenRefreshSerializer
-from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth import authenticate,logout
 from django.shortcuts import get_object_or_404
-from config.settings import SECRET_KEY
+from django.core.mail import EmailMessage
+from config.settings import SECRET_KEY,EMAIL_HOST_USER
 from posts.models import Post,Comment
 from posts.serializers import PostListSerializer,CommentListSerializer
 
-class SpartaTokenObtainPairView(TokenObtainPairView):
-    serializer_class = SpartaTokenObtainPairSerializer
+def token_refresh(refresh):
+    if refresh:
+        try:
+            refresh = RefreshToken(refresh)
+            access = refresh.access_token
+
+            return Response({
+                'access': str(access),
+                'refresh': str(refresh)
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': 'Invalid refresh token'}, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        return Response({'error': 'Refresh token not provided'}, status=status.HTTP_400_BAD_REQUEST)
 
 class SignupView(APIView):
     def post(self, request):
@@ -67,28 +79,27 @@ class UserAPIView(APIView):
             pk = payload.get('user_id')
             user = get_object_or_404(User, pk=pk)
             serializer = UserModelSerializer(instance=user)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response({'user':serializer.data}, status=status.HTTP_200_OK)
         except(jwt.exceptions.ExpiredSignatureError):
             # 토큰 만료 시 토큰 갱신
-            data = {'refresh': request.COOKIES.get('refresh', None)}
-            serializer = TokenRefreshSerializer(data=data)
-            if serializer.is_valid(raise_exception=True):
-                access = serializer.data.get('access', None)
-                refresh = serializer.data.get('refresh', None)
+            res = token_refresh(request.COOKIES.get('refresh', None))
+            if res.status_code==200:
+                access = res.data["access"]
+                refresh = res.data["refresh"]
                 payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
                 pk = payload.get('user_id')
                 user = get_object_or_404(User, pk=pk)
                 serializer = UserModelSerializer(instance=user)
                 return Response(
-                            serializer.data,
-                            {
+                            {   
+                                'user': serializer.data,
                                 "token":{
                                     "access":access,
                                     "refresh":refresh
                                 }
                             },
                             status = status.HTTP_200_OK)
-            raise jwt.exceptions.InvalidTokenError
+            return res
     # id pw 로 로그인
     def post(self, request):
         user = authenticate(
@@ -100,7 +111,16 @@ class UserAPIView(APIView):
             token = SpartaTokenObtainPairSerializer.get_token(user)
             refresh_token = str(token)
             access_token = str(token.access_token)
-            res =  Response({
+            if user.is_reseted:
+                res =  Response({
+                    "message": "Login Success, Password Reset Required",
+                    "token":{
+                        "access":access_token,
+                        "refresh":refresh_token
+                    }
+                    },status = status.HTTP_200_OK)
+            else:
+                res =  Response({
                     "message": "Login Success",
                     "token":{
                         "access":access_token,
@@ -160,11 +180,10 @@ def getNickname(request):
             return Response(serializer.data['nick_name'], status=status.HTTP_200_OK)
         except(jwt.exceptions.ExpiredSignatureError):
             # 토큰 만료 시 토큰 갱신
-            data = {'refresh': request.COOKIES.get('refresh',False)}
-            serializer = TokenRefreshSerializer(data=data)
-            if serializer.is_valid(raise_exception=True):
-                access = serializer.data.get('access', None)
-                refresh = serializer.data.get('refresh', None)
+            res = token_refresh(request.COOKIES.get('refresh', None))
+            if res.status_code==200:
+                access = res.data["access"]
+                refresh = res.data["refresh"]
                 payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
                 pk = payload.get('user_id')
                 user = get_object_or_404(User, pk=pk)
@@ -180,8 +199,7 @@ def getNickname(request):
                         },
                         status=status.HTTP_200_OK
                     )
-                return res
-            raise jwt.exceptions.InvalidTokenError
+            return res
 
 
 class UserinfoView(APIView):
@@ -198,11 +216,10 @@ class UserinfoView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         except(jwt.exceptions.ExpiredSignatureError):
             # 토큰 만료 시 토큰 갱신
-            data = {'refresh': request.COOKIES.get('refresh', None)}
-            serializer = TokenRefreshSerializer(data=data)
-            if serializer.is_valid(raise_exception=True):
-                access = serializer.data.get('access', None)
-                refresh = serializer.data.get('refresh', None)
+            res = token_refresh(request.COOKIES.get('refresh', None))
+            if res.status_code==200:
+                access = res.data["access"]
+                refresh = res.data["refresh"]
                 payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
                 pk = payload.get('user_id')
                 user = get_object_or_404(User, pk=pk)
@@ -218,8 +235,7 @@ class UserinfoView(APIView):
                         },
                         status=status.HTTP_200_OK
                     )
-                return res
-            raise jwt.exceptions.InvalidTokenError
+            return res
     def patch(self, request):
         try:
             token = request.COOKIES.get('access',False)
@@ -248,11 +264,10 @@ class UserinfoView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         except(jwt.exceptions.ExpiredSignatureError):
             # 토큰 만료 시 토큰 갱신
-            data = {'refresh': request.COOKIES.get('refresh', None)}
-            serializer = TokenRefreshSerializer(data=data)
-            if serializer.is_valid(raise_exception=True):
-                access = serializer.data.get('access', None)
-                refresh = serializer.data.get('refresh', None)
+            res = token_refresh(request.COOKIES.get('refresh', None))
+            if res.status_code==200:
+                access = res.data["access"]
+                refresh = res.data["refresh"]
                 payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
                 pk = payload.get('user_id')
                 user = get_object_or_404(User, pk=pk)
@@ -269,8 +284,7 @@ class UserinfoView(APIView):
                         },
                         status=status.HTTP_200_OK
                     )
-                return res
-            raise jwt.exceptions.InvalidTokenError
+            return res
         
 @api_view(['POST']) 
 def changePassword(request):
@@ -290,18 +304,17 @@ def changePassword(request):
 
         if user.check_password(current_pw):
             user.set_password(new_pw)
-            
+            user.is_reseted = False
             user.save()
             return Response({"message": "Password change success"}, status=status.HTTP_200_OK)
         else: 
             return Response({"message": "Current password is different"},status=status.HTTP_400_BAD_REQUEST)
     except(jwt.exceptions.ExpiredSignatureError):
         # 토큰 만료 시 토큰 갱신
-        data = {'refresh': request.COOKIES.get('refresh',None)}
-        serializer = TokenRefreshSerializer(data=data)
-        if serializer.is_valid(raise_exception=True):
-            access = serializer.data.get('access', None)
-            refresh = serializer.data.get('refresh', None)
+        res = token_refresh(request.COOKIES.get('refresh', None))
+        if res.status_code==200:
+            access = res.data["access"]
+            refresh = res.data["refresh"]
             payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
             pk = payload.get('user_id')
             user = get_object_or_404(User, pk=pk)
@@ -323,7 +336,6 @@ def changePassword(request):
                         },
                         status=status.HTTP_200_OK
                     )
-                return res
             else: 
                 res = Response(
                         {
@@ -335,8 +347,8 @@ def changePassword(request):
                         },
                         status=status.HTTP_400_BAD_REQUEST
                     )
-                return res
-        raise jwt.exceptions.InvalidTokenError
+        return res
+        
 
 @api_view(['GET'])
 def myPosts(request):
@@ -361,22 +373,19 @@ def myPosts(request):
             },
             status=status.HTTP_200_OK
         )
-
-        
     except(jwt.exceptions.ExpiredSignatureError):
         # 토큰 만료 시 토큰 갱신
-        data = {'refresh': request.COOKIES.get('refresh',None)}
-        serializer = TokenRefreshSerializer(data=data)
-        if serializer.is_valid(raise_exception=True):
-            access = serializer.data.get('access', None)
-            refresh = serializer.data.get('refresh', None)
+        res = token_refresh(request.COOKIES.get('refresh', None))
+        if res.status_code==200:
+            access = res.data["access"]
+            refresh = res.data["refresh"]
             payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
             pk = payload.get('user_id')
             user = get_object_or_404(User, pk=pk)
 
             myposts = Post.objects.filter(writer=user)
 
-            return Response(
+            res = Response(
                 {
                     "message": "Success",
                     "token":{
@@ -387,7 +396,7 @@ def myPosts(request):
                 }, 
                 status=status.HTTP_200_OK
             )
-        raise jwt.exceptions.InvalidTokenError
+        return res
 
 @api_view(['GET'])
 def myComments(request):
@@ -416,18 +425,17 @@ def myComments(request):
         
     except(jwt.exceptions.ExpiredSignatureError):
         # 토큰 만료 시 토큰 갱신
-        data = {'refresh': request.COOKIES.get('refresh',None)}
-        serializer = TokenRefreshSerializer(data=data)
-        if serializer.is_valid(raise_exception=True):
-            access = serializer.data.get('access', None)
-            refresh = serializer.data.get('refresh', None)
+        res = token_refresh(request.COOKIES.get('refresh', None))
+        if res.status_code==200:
+            access = res.data["access"]
+            refresh = res.data["refresh"]
             payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
             pk = payload.get('user_id')
             user = get_object_or_404(User, pk=pk)
 
             myposts = Post.objects.filter(writer=user)
 
-            return Response(
+            res = Response(
                 {
                     "message": "Success",
                     "token":{
@@ -438,7 +446,7 @@ def myComments(request):
                 }, 
                 status=status.HTTP_200_OK
             )
-        raise jwt.exceptions.InvalidTokenError
+        return res
 
     
 @api_view(['GET'])
@@ -451,7 +459,7 @@ def myLikes(request):
         payload = jwt.decode(access,SECRET_KEY,algorithms=['HS256'])
         pk = payload.get('user_id')
         user = get_object_or_404(User, pk=pk)
-        likepost_list = user.post_set.all()
+        likepost_list = user.like_posts.all()
         likeposts = []
         for post in likepost_list:
             likeposts.append(PostListSerializer(instance=post).data)
@@ -468,11 +476,10 @@ def myLikes(request):
         
     except(jwt.exceptions.ExpiredSignatureError):
         # 토큰 만료 시 토큰 갱신
-        data = {'refresh': request.COOKIES.get('refresh',None)}
-        serializer = TokenRefreshSerializer(data=data)
-        if serializer.is_valid(raise_exception=True):
-            access = serializer.data.get('access', None)
-            refresh = serializer.data.get('refresh', None)
+        res = token_refresh(request.COOKIES.get('refresh', None))
+        if res.status_code==200:
+            access = res.data["access"]
+            refresh = res.data["refresh"]
             payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
             pk = payload.get('user_id')
             user = get_object_or_404(User, pk=pk)
@@ -482,7 +489,7 @@ def myLikes(request):
                 likeposts.append(PostListSerializer(instance=post).data)
                 likeposts[-1].pop('writer')
                 likeposts[-1].pop('likes')
-            return Response(
+            res = Response(
                 {
                     "message": "Success",
                     "token":{
@@ -493,4 +500,53 @@ def myLikes(request):
                 },
                 status=status.HTTP_200_OK
             )
-        raise jwt.exceptions.InvalidTokenError
+        return res
+
+class ForgetIDView(APIView):
+    def get(self, request):
+        pass
+    def post(self, request):
+        email = json.loads(request.body)['email']
+        user = User.objects.get(email = email)
+        if user is not None:
+            method_email = EmailMessage(
+                'Your ID is in the email',
+                str(user.username),
+                EMAIL_HOST_USER,
+                [email],
+            )
+            method_email.send(fail_silently=False)
+            return Response(status=status.HTTP_200_OK)
+        else:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+def randomConfirmKey():
+    string_pool = string.ascii_letters+string.digits
+    result = "" # 결과 값
+    for i in range(16) :
+        # 랜덤한 하나의 숫자를 뽑아서, 문자열 결합을 한다.
+        result += random.choice(string_pool)
+    return result
+
+class ForgetPasswordView(APIView):
+    def get(self, request):
+        pass
+    def post(self, request):
+        email = json.loads(request.body)['email']
+        username = json.loads(request.body)['username']
+        user = User.objects.get(email = email,username=username)
+        randomPW = randomConfirmKey()
+        if user is not None:
+            method_email = EmailMessage(
+                'Your tmp Password is in the email',
+                randomPW,
+                EMAIL_HOST_USER,
+                [email],
+            )
+            method_email.send(fail_silently=False)
+            user.is_reseted = True
+            user.set_password(randomPW)
+            user.save()
+            return Response(status=status.HTTP_200_OK)
+        else:
+            return Response(status=status.HTTP_404_NOT_FOUND)
