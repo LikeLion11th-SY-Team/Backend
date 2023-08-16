@@ -178,6 +178,7 @@ ALLOWED_HOSTS = [
     '13.125.121.158',
     'ec2-13-125-121-158.ap-northeast-2.compute.amazonaws.com',
     '.한걸음씩.o-r.kr',
+    '.xn--369a718b4pbn1y.o-r.k',
 ]
 
 
