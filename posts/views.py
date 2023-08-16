@@ -11,6 +11,12 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.decorators import authentication_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes
+e
+
 
 ### CRUD 구현
 ### 게시판 분류를 어떻게 할 지 정해야 시작가능할 듯
@@ -207,49 +213,68 @@ class CommentView(APIView):
                     )
             raise jwt.exceptions.InvalidTokenError
 
-@api_view(['GET'])
-def like_post(request, post_pk):
-    try:
-        # 유저 정보 체크 부분
-        token = request.COOKIES.get('access',False)
-        if token:
-            token = str(token).encode("utf-8")
-        access = token
-        payload = jwt.decode(access,SECRET_KEY,algorithms=['HS256'])
-        pk = payload.get('user_id')
-        user = get_object_or_404(User, pk=pk)
-        
-        #좋아요 부분
-        post = get_object_or_404(Post, pk=post_pk)
-        if user in post.likes.all():
-            post.likes.remove(user)
-        else:
-            post.likes.add(user)
-        return Response({"message":"Success"},status=status.HTTP_200_OK)
-    except(jwt.exceptions.ExpiredSignatureError):
-        # 토큰 만료 시 토큰 갱신
-        data = {'refresh': request.COOKIES.get('refresh', None)}
-        serializer = TokenRefreshSerializer(data=data)
-        if serializer.is_valid(raise_exception=True):
-            access = serializer.data.get('access', None)
-            refresh = serializer.data.get('refresh', None)
-            payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
-            pk = payload.get('user_id')
-            user = get_object_or_404(User, pk=pk)
+class PostView(APIView):
+    @staticmethod
+    @api_view(['GET'])
+    def post_list(request, category):
+        posts = Post.objects.filter(category=category) # category는 free와 inform 기능이 있음
+        serializer = PostSerializer(posts, many=True)
+        return Response(serializer.data)
 
-            post = get_object_or_404(Post, pk=post_pk)
-            if user in post.likes.all():
-                post.likes.remove(user)
-            else:
-                post.likes.add(user)
-            return Response(
-                {
-                    "message":"Success",
-                    "token": {
-                        "access": access,
-                        "refresh": refresh,
-                    },
-                },
-                status=status.HTTP_200_OK
-            )
-        raise jwt.exceptions.InvalidTokenError
+    @staticmethod
+    @api_view(['POST'])
+    @authentication_classes([TokenAuthentication])  # 토큰 인증 추가
+    @permission_classes([IsAuthenticated])
+    def post_create(request):
+        serializer = PostSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(writer=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response({'error': '글 작성에 실패하였습니다.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    @staticmethod
+    @api_view(['GET'])
+    @permission_classes([IsAuthenticated])
+    def post_detail(request, post_pk):
+        try:
+            post = Post.objects.get(pk=post_pk)
+        except Post.DoesNotExist:
+            return Response({'error': '해당 글을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = PostSerializer(post)
+        return Response(serializer.data)
+
+    @staticmethod
+    @api_view(['PUT'])
+    @authentication_classes([TokenAuthentication])  # 토큰 인증 추가
+    @permission_classes([IsAuthenticated])
+    def post_update(request, post_pk):
+        try:
+            post = Post.objects.get(pk=post_pk)
+        except Post.DoesNotExist:
+            return Response({'error': '해당 글을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+        
+        if post.writer != request.user:
+            return Response({'error': '글 수정 권한이 없습니다.'}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = PostSerializer(post, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response({'error': '글 수정에 실패하였습니다.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    @staticmethod
+    @api_view(['DELETE'])
+    @authentication_classes([TokenAuthentication])  # 토큰 인증 추가
+    @permission_classes([IsAuthenticated])
+    def post_delete(request, post_pk):
+        try:
+            post = Post.objects.get(pk=post_pk)
+        except Post.DoesNotExist:
+            return Response({'error': '해당 글을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+        
+        if post.writer != request.user:
+            return Response({'error': '글 삭제 권한이 없습니다.'}, status=status.HTTP_403_FORBIDDEN)
+
+        post.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
