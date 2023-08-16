@@ -5,12 +5,12 @@ from config.settings import SECRET_KEY
 from .models import Post,Comment
 from .serializers import PostSerializer, PostCreateSerializer,CommentCreateSerializer,CommentSerializer
 from users.models import User
+from users.views import token_refresh
 
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
-from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 
 ### CRUD 구현
 ### 게시판 분류를 어떻게 할 지 정해야 시작가능할 듯
@@ -50,11 +50,10 @@ class CommentView(APIView):
         
         except(jwt.exceptions.ExpiredSignatureError):
             # 토큰 만료 시 토큰 갱신
-            data = {'refresh': request.COOKIES.get('refresh', None)}
-            serializer = TokenRefreshSerializer(data=data)
-            if serializer.is_valid(raise_exception=True):
-                access = serializer.data.get('access', None)
-                refresh = serializer.data.get('refresh', None)
+            res = token_refresh(request.COOKIES.get('refresh', None))
+            if res.status_code==200:
+                access = res.data["access"]
+                refresh = res.data["refresh"]
                 payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
                 pk = payload.get('user_id')
                 user = get_object_or_404(User, pk=pk)
@@ -64,7 +63,7 @@ class CommentView(APIView):
                 serializer = CommentCreateSerializer(data=data)
                 if serializer.is_valid():
                     serializer.save(post=post,commenter=user)
-                    return Response(
+                    res =  Response(
                         {
                             "message":"Success",
                             "comment":serializer.data,
@@ -75,7 +74,8 @@ class CommentView(APIView):
                         },
                         status = status.HTTP_200_OK
                     )
-                return Response(
+                else:
+                    res = Response(
                         {
                             "message":"Comment is not valid",
                             "token": {
@@ -85,7 +85,7 @@ class CommentView(APIView):
                         },
                         status=status.HTTP_400_BAD_REQUEST
                     )
-            raise jwt.exceptions.InvalidTokenError
+            return res
         
     def put(self, request, comment_pk):
         try:
@@ -113,11 +113,10 @@ class CommentView(APIView):
         
         except(jwt.exceptions.ExpiredSignatureError):
             # 토큰 만료 시 토큰 갱신
-            data = {'refresh': request.COOKIES.get('refresh', None)}
-            serializer = TokenRefreshSerializer(data=data)
-            if serializer.is_valid(raise_exception=True):
-                access = serializer.data.get('access', None)
-                refresh = serializer.data.get('refresh', None)
+            res = token_refresh(request.COOKIES.get('refresh', None))
+            if res.status_code==200:
+                access = res.data["access"]
+                refresh = res.data["refresh"]
                 payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
                 pk = payload.get('user_id')
                 user = get_object_or_404(User, pk=pk)
@@ -126,7 +125,7 @@ class CommentView(APIView):
                 serializer = CommentSerializer(instance=comment,data=request.data,partial=True)
                 if serializer.is_valid(raise_exception=True) and comment.commenter==user:
                     comment = serializer.save()
-                    return Response(
+                    res = Response(
                         serializer.data,
                         {
                             "message":"Success",
@@ -138,8 +137,18 @@ class CommentView(APIView):
                         },
                         status = status.HTTP_200_OK
                     )
-                return Response({"message":"Comment is not valid"},status=400)
-            raise jwt.exceptions.InvalidTokenError
+                else:
+                    res = Response(
+                        {
+                            "message":"Comment is not valid",
+                            "token": {
+                                    "access": access,
+                                    "refresh": refresh,
+                            },
+                        },
+                        status=400
+                    )
+            return res
     
 
     def delete(self, request, comment_pk):
@@ -171,11 +180,10 @@ class CommentView(APIView):
                 )
         except(jwt.exceptions.ExpiredSignatureError):
             # 토큰 만료 시 토큰 갱신
-            data = {'refresh': request.COOKIES.get('refresh', None)}
-            serializer = TokenRefreshSerializer(data=data)
-            if serializer.is_valid(raise_exception=True):
-                access = serializer.data.get('access', None)
-                refresh = serializer.data.get('refresh', None)
+            res = token_refresh(request.COOKIES.get('refresh', None))
+            if res.status_code==200:
+                access = res.data["access"]
+                refresh = res.data["refresh"]
                 payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
                 pk = payload.get('user_id')
                 user = get_object_or_404(User, pk=pk)
@@ -184,7 +192,7 @@ class CommentView(APIView):
             
                 if comment.commenter==user:
                     comment.delete()
-                    return Response(
+                    res = Response(
                         {
                             "message":"Success",
                             "token": {
@@ -195,7 +203,7 @@ class CommentView(APIView):
                         status=status.HTTP_200_OK
                     )
                 else:
-                    return Response(
+                    res = Response(
                         {
                             "message":"Different Commenter",
                             "token": {
@@ -205,7 +213,7 @@ class CommentView(APIView):
                         },
                         status=status.HTTP_400_BAD_REQUEST
                     )
-            raise jwt.exceptions.InvalidTokenError
+            return res
 
 @api_view(['GET'])
 def like_post(request, post_pk):
@@ -228,11 +236,10 @@ def like_post(request, post_pk):
         return Response({"message":"Success"},status=status.HTTP_200_OK)
     except(jwt.exceptions.ExpiredSignatureError):
         # 토큰 만료 시 토큰 갱신
-        data = {'refresh': request.COOKIES.get('refresh', None)}
-        serializer = TokenRefreshSerializer(data=data)
-        if serializer.is_valid(raise_exception=True):
-            access = serializer.data.get('access', None)
-            refresh = serializer.data.get('refresh', None)
+        res = token_refresh(request.COOKIES.get('refresh', None))
+        if res.status_code==200:
+            access = res.data["access"]
+            refresh = res.data["refresh"]
             payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
             pk = payload.get('user_id')
             user = get_object_or_404(User, pk=pk)
@@ -242,7 +249,7 @@ def like_post(request, post_pk):
                 post.likes.remove(user)
             else:
                 post.likes.add(user)
-            return Response(
+            res = Response(
                 {
                     "message":"Success",
                     "token": {
@@ -252,4 +259,4 @@ def like_post(request, post_pk):
                 },
                 status=status.HTTP_200_OK
             )
-        raise jwt.exceptions.InvalidTokenError
+        return res
