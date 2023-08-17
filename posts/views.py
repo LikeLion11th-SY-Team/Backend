@@ -15,7 +15,7 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import authentication_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
-e
+
 
 
 ### CRUD 구현
@@ -262,28 +262,33 @@ def like_post(request, post_pk):
         raise jwt.exceptions.InvalidTokenError
 
 class PostView(APIView):
-    @staticmethod
-    @api_view(['GET'])
-    def post_list(request, category):
-        posts = Post.objects.filter(category=category) # category는 free와 inform 기능이 있음
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, category):
+        user, access = handle_token(request)
+        if not user:
+            return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        posts = Post.objects.filter(category=category)
         serializer = PostSerializer(posts, many=True)
         return Response(serializer.data)
 
-    @staticmethod
-    @api_view(['POST'])
-    @authentication_classes([TokenAuthentication])  # 토큰 인증 추가
-    @permission_classes([IsAuthenticated])
-    def post_create(request):
+    def post(self, request):
+        user, access = handle_token(request)
+        if not user:
+            return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
+
         serializer = PostSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(writer=request.user)
+            serializer.save(writer=user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response({'error': '글 작성에 실패하였습니다.'}, status=status.HTTP_400_BAD_REQUEST)
+    def view_detail(self, request, post_pk):
+        user, access = handle_token(request)
+        if not user:
+            return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
 
-    @staticmethod
-    @api_view(['GET'])
-    @permission_classes([IsAuthenticated])
-    def post_detail(request, post_pk):
         try:
             post = Post.objects.get(pk=post_pk)
         except Post.DoesNotExist:
@@ -292,17 +297,17 @@ class PostView(APIView):
         serializer = PostSerializer(post)
         return Response(serializer.data)
 
-    @staticmethod
-    @api_view(['PUT'])
-    @authentication_classes([TokenAuthentication])  # 토큰 인증 추가
-    @permission_classes([IsAuthenticated])
-    def post_update(request, post_pk):
+    def put(self, request, post_pk):
+        user, access = handle_token(request)
+        if not user:
+            return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
+
         try:
             post = Post.objects.get(pk=post_pk)
         except Post.DoesNotExist:
             return Response({'error': '해당 글을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
         
-        if post.writer != request.user:
+        if post.writer != user:
             return Response({'error': '글 수정 권한이 없습니다.'}, status=status.HTTP_403_FORBIDDEN)
 
         serializer = PostSerializer(post, data=request.data)
@@ -311,17 +316,17 @@ class PostView(APIView):
             return Response(serializer.data)
         return Response({'error': '글 수정에 실패하였습니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    @staticmethod
-    @api_view(['DELETE'])
-    @authentication_classes([TokenAuthentication])  # 토큰 인증 추가
-    @permission_classes([IsAuthenticated])
-    def post_delete(request, post_pk):
+    def delete(self, request, post_pk):
+        user, access = handle_token(request)
+        if not user:
+            return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
+
         try:
             post = Post.objects.get(pk=post_pk)
         except Post.DoesNotExist:
             return Response({'error': '해당 글을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
         
-        if post.writer != request.user:
+        if post.writer != user:
             return Response({'error': '글 삭제 권한이 없습니다.'}, status=status.HTTP_403_FORBIDDEN)
 
         post.delete()
