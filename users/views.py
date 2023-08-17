@@ -12,7 +12,7 @@ from django.shortcuts import get_object_or_404
 from django.core.mail import EmailMessage
 from config.settings import SECRET_KEY,EMAIL_HOST_USER
 from posts.models import Post,Comment
-from posts.serializers import PostListSerializer,CommentListSerializer
+from posts.serializers import CommentListSerializer
 
 def token_refresh(refresh):
     if refresh:

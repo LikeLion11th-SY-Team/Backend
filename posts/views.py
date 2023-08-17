@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404
 from config.settings import SECRET_KEY
 
 from .models import Post,Comment
-from .serializers import PostSerializer, PostCreateSerializer,CommentCreateSerializer,CommentSerializer,PostListSerializer
+from .serializers import PostSerializer,CommentCreateSerializer,CommentSerializer
 from users.models import User
 from users.views import token_refresh
 
@@ -16,8 +16,6 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import authentication_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
-e
-
 
 ### CRUD 구현
 ### 게시판 분류를 어떻게 할 지 정해야 시작가능할 듯

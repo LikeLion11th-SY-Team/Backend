@@ -2,7 +2,6 @@ from django.urls import path
 from .views import UserAPIView,SignupView,UserinfoView,ForgetIDView,ForgetPasswordView
 from .views import checkDuplicatedID,checkDuplicatedNickname
 from .views import getNickname,changePassword,myPosts,myComments,myLikes
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 app_name = "users"
 
