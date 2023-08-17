@@ -24,6 +24,12 @@ class PostSerializer(serializers.ModelSerializer):
         model = models.Post
         fields = ["pk","title","writer","writer_nickname","contents","created_at","updated_at","likes_count","comments","likes","category"]
 
+class PostCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Post
+        fields = ["pk","title","contents","category","writer"]
+        read_only_fields = ["writer"]
+
 class PostListSerializer(PostSerializer):
     writer = serializers.StringRelatedField()
     writer_nickname = serializers.CharField(source='writer.nick_name',read_only=True)
