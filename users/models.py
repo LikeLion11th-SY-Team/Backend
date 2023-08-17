@@ -41,6 +41,7 @@ class User(AbstractUser):
     is_social = models.BooleanField("소셜로그인 유저",default=False)
     social_id = models.CharField("소셜로그인 ID",max_length=20,default="")
     
+    is_reseted = models.BooleanField("비밀번호 초기화됨",default=False)
 
     BOOKMARK = 0
     SIGNUP = 1

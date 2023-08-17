@@ -21,11 +21,6 @@ class PostSerializer(serializers.ModelSerializer):
         model = models.Post
         fields = ["pk","writer","title","contents","created_at","updated_at","view_count","likes","comments"]
 
-class PostCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.Post
-        fields = ["title","category","contents"]
-
 class PostListSerializer(PostSerializer):
     writer = serializers.StringRelatedField()
     writer_nickname = serializers.CharField(source='writer.nick_name',read_only=True)
