@@ -3,8 +3,9 @@ from django.shortcuts import get_object_or_404
 from config.settings import SECRET_KEY
 
 from .models import Post,Comment
-from .serializers import PostSerializer, PostCreateSerializer,CommentCreateSerializer,CommentSerializer
+from .serializers import PostSerializer, PostCreateSerializer,CommentCreateSerializer,CommentSerializer,PostListSerializer
 from users.models import User
+from users.views import token_refresh
 
 from rest_framework import status
 from rest_framework.views import APIView
@@ -21,6 +22,24 @@ e
 ### CRUD 구현
 ### 게시판 분류를 어떻게 할 지 정해야 시작가능할 듯
 ### url로 나눌 것인지, ?category={id} 등으로 받아올 것인지...
+@api_view(['GET'])
+def Posts(request):
+    category = request.GET['category']
+    if category!='free' or category!='info':
+        return Response(status=status.HTTP_404_NOT_FOUND)
+    post_list = Post.objects.filter(category=category)
+    posts = []
+    for post in post_list:
+        posts.append(PostListSerializer(instance=post).data)
+        posts[-1].pop('writer')
+        posts[-1].pop('likes')
+    return Response(
+        {
+            "message": "Success",
+            'posts': posts
+        },
+        status=status.HTTP_200_OK
+    )
 
 class CommentView(APIView):
     def post(self, request, post_pk):
@@ -56,11 +75,10 @@ class CommentView(APIView):
         
         except(jwt.exceptions.ExpiredSignatureError):
             # 토큰 만료 시 토큰 갱신
-            data = {'refresh': request.COOKIES.get('refresh', None)}
-            serializer = TokenRefreshSerializer(data=data)
-            if serializer.is_valid(raise_exception=True):
-                access = serializer.data.get('access', None)
-                refresh = serializer.data.get('refresh', None)
+            res = token_refresh(request.COOKIES.get('refresh', None))
+            if res.status_code==200:
+                access = res.data["access"]
+                refresh = res.data["refresh"]
                 payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
                 pk = payload.get('user_id')
                 user = get_object_or_404(User, pk=pk)
@@ -70,7 +88,7 @@ class CommentView(APIView):
                 serializer = CommentCreateSerializer(data=data)
                 if serializer.is_valid():
                     serializer.save(post=post,commenter=user)
-                    return Response(
+                    res =  Response(
                         {
                             "message":"Success",
                             "comment":serializer.data,
@@ -81,7 +99,8 @@ class CommentView(APIView):
                         },
                         status = status.HTTP_200_OK
                     )
-                return Response(
+                else:
+                    res = Response(
                         {
                             "message":"Comment is not valid",
                             "token": {
@@ -91,7 +110,7 @@ class CommentView(APIView):
                         },
                         status=status.HTTP_400_BAD_REQUEST
                     )
-            raise jwt.exceptions.InvalidTokenError
+            return res
         
     def put(self, request, comment_pk):
         try:
@@ -119,11 +138,10 @@ class CommentView(APIView):
         
         except(jwt.exceptions.ExpiredSignatureError):
             # 토큰 만료 시 토큰 갱신
-            data = {'refresh': request.COOKIES.get('refresh', None)}
-            serializer = TokenRefreshSerializer(data=data)
-            if serializer.is_valid(raise_exception=True):
-                access = serializer.data.get('access', None)
-                refresh = serializer.data.get('refresh', None)
+            res = token_refresh(request.COOKIES.get('refresh', None))
+            if res.status_code==200:
+                access = res.data["access"]
+                refresh = res.data["refresh"]
                 payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
                 pk = payload.get('user_id')
                 user = get_object_or_404(User, pk=pk)
@@ -132,7 +150,7 @@ class CommentView(APIView):
                 serializer = CommentSerializer(instance=comment,data=request.data,partial=True)
                 if serializer.is_valid(raise_exception=True) and comment.commenter==user:
                     comment = serializer.save()
-                    return Response(
+                    res = Response(
                         serializer.data,
                         {
                             "message":"Success",
@@ -144,8 +162,18 @@ class CommentView(APIView):
                         },
                         status = status.HTTP_200_OK
                     )
-                return Response({"message":"Comment is not valid"},status=400)
-            raise jwt.exceptions.InvalidTokenError
+                else:
+                    res = Response(
+                        {
+                            "message":"Comment is not valid",
+                            "token": {
+                                    "access": access,
+                                    "refresh": refresh,
+                            },
+                        },
+                        status=400
+                    )
+            return res
     
 
     def delete(self, request, comment_pk):
@@ -177,11 +205,10 @@ class CommentView(APIView):
                 )
         except(jwt.exceptions.ExpiredSignatureError):
             # 토큰 만료 시 토큰 갱신
-            data = {'refresh': request.COOKIES.get('refresh', None)}
-            serializer = TokenRefreshSerializer(data=data)
-            if serializer.is_valid(raise_exception=True):
-                access = serializer.data.get('access', None)
-                refresh = serializer.data.get('refresh', None)
+            res = token_refresh(request.COOKIES.get('refresh', None))
+            if res.status_code==200:
+                access = res.data["access"]
+                refresh = res.data["refresh"]
                 payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
                 pk = payload.get('user_id')
                 user = get_object_or_404(User, pk=pk)
@@ -190,7 +217,7 @@ class CommentView(APIView):
             
                 if comment.commenter==user:
                     comment.delete()
-                    return Response(
+                    res = Response(
                         {
                             "message":"Success",
                             "token": {
@@ -201,7 +228,7 @@ class CommentView(APIView):
                         status=status.HTTP_200_OK
                     )
                 else:
-                    return Response(
+                    res = Response(
                         {
                             "message":"Different Commenter",
                             "token": {
@@ -213,6 +240,52 @@ class CommentView(APIView):
                     )
             raise jwt.exceptions.InvalidTokenError
 
+@api_view(['GET'])
+def like_post(request, post_pk):
+    try:
+        # 유저 정보 체크 부분
+        token = request.COOKIES.get('access',False)
+        if token:
+            token = str(token).encode("utf-8")
+        access = token
+        payload = jwt.decode(access,SECRET_KEY,algorithms=['HS256'])
+        pk = payload.get('user_id')
+        user = get_object_or_404(User, pk=pk)
+        
+        #좋아요 부분
+        post = get_object_or_404(Post, pk=post_pk)
+        if user in post.likes.all():
+            post.likes.remove(user)
+        else:
+            post.likes.add(user)
+        return Response({"message":"Success"},status=status.HTTP_200_OK)
+    except(jwt.exceptions.ExpiredSignatureError):
+        # 토큰 만료 시 토큰 갱신
+        data = {'refresh': request.COOKIES.get('refresh', None)}
+        serializer = TokenRefreshSerializer(data=data)
+        if serializer.is_valid(raise_exception=True):
+            access = serializer.data.get('access', None)
+            refresh = serializer.data.get('refresh', None)
+            payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
+            pk = payload.get('user_id')
+            user = get_object_or_404(User, pk=pk)
+
+            post = get_object_or_404(Post, pk=post_pk)
+            if user in post.likes.all():
+                post.likes.remove(user)
+            else:
+                post.likes.add(user)
+            return Response(
+                {
+                    "message":"Success",
+                    "token": {
+                        "access": access,
+                        "refresh": refresh,
+                    },
+                },
+                status=status.HTTP_200_OK
+            )
+        raise jwt.exceptions.InvalidTokenError
 class PostView(APIView):
     @staticmethod
     @api_view(['GET'])

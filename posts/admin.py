@@ -3,8 +3,8 @@ from . import models
 
 class CommentInline(admin.TabularInline):
     model = models.Comment
-    extra = 1
-    min_num = 1
+    extra = 0
+    min_num = 0
     max_num = 20
     readonly_fields = ['created_at']
     verbose_name = '댓글'
