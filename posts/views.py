@@ -222,48 +222,13 @@ class CommentView(APIView):
 
 class PostView(APIView):
     def get(self, request, category):
-        try:
-            # 유저 정보 체크 부분
-            token = request.COOKIES.get('access',False)
-            if token:
-                token = str(token).encode("utf-8")
-            access = token
-            payload = jwt.decode(access,SECRET_KEY,algorithms=['HS256'])
-            pk = payload.get('user_id')
-            user = get_object_or_404(User, pk=pk)
-            if not user:
-                return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
-
-            posts = Post.objects.filter(category=category)
-            data = PostSerializer(posts, many=True).data
-            for post in data:
-                post.pop('writer')
-                post.pop('likes')
-                post.pop('contents')
-
-            return Response(data)
-        except(jwt.exceptions.ExpiredSignatureError):
-            # 토큰 만료 시 토큰 갱신
-            res = token_refresh(request.COOKIES.get('refresh', None))
-            if res.status_code==200:
-                access = res.data["access"]
-                refresh = res.data["refresh"]
-                payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
-                pk = payload.get('user_id')
-                user = get_object_or_404(User, pk=pk)
-                
-                posts = Post.objects.filter(category=category)
-                data = PostSerializer(posts, many=True).data
-                for post in data:
-                    post.pop('writer')
-                    post.pop('likes')
-                    post.pop('contents')
-                data.append({"token":{
-                                    "access": access,
-                                    "refresh": refresh
-                                }})
-                res = Response(data)
-            return res
+        posts = Post.objects.filter(category=category)
+        data = PostSerializer(posts, many=True).data
+        for post in data:
+            post.pop('writer')
+            post.pop('likes')
+            post.pop('contents')
+        return Response(data,status=status.HTTP_200_OK)
                 
     def post(self, request):
         try:
@@ -283,8 +248,8 @@ class PostView(APIView):
                 data = serializer.data
                 data.pop("writer")
                 data.pop("likes")
-                return Response(data, status=status.HTTP_201_CREATED)
-            return Response({'error': '글 작성에 실패하였습니다.'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(data, status=status.HTTP_200_OK)
+            return Response({"message": "글 작성에 실패하였습니다."}, status=status.HTTP_400_BAD_REQUEST)
         except(jwt.exceptions.ExpiredSignatureError):
             # 토큰 만료 시 토큰 갱신
             res = token_refresh(request.COOKIES.get('refresh', None))
@@ -306,8 +271,16 @@ class PostView(APIView):
                                         "access": access,
                                         "refresh": refresh
                                     }
-                    return Response(data, status=status.HTTP_201_CREATED)
-                return Response({'error': '글 작성에 실패하였습니다.'}, status=status.HTTP_400_BAD_REQUEST)
+                    return Response(data, status=status.HTTP_200_OK)
+                return Response(
+                    {
+                        'message': '글 작성에 실패하였습니다.',
+                        'token':{
+                                    "access": access,
+                                    "refresh": refresh
+                                },
+                    },
+                    status=status.HTTP_400_BAD_REQUEST)
             return res
     
     @api_view(['GET'])
@@ -321,16 +294,19 @@ class PostView(APIView):
             payload = jwt.decode(access,SECRET_KEY,algorithms=['HS256'])
             pk = payload.get('user_id')
             user = get_object_or_404(User, pk=pk)
-            if not user:
-                return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
             try:
                 post = Post.objects.get(pk=post_pk)
             except Post.DoesNotExist:
-                return Response({'error': '해당 글을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'message': '해당 글을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
 
             data = PostSerializer(post).data
             data.pop("writer")
+            is_like = False
+            print(data["likes"])
+            if str(user) in data["likes"]:
+                is_like = True    
             data.pop("likes")
+            data["is_like"] = is_like
             return Response(data,status=status.HTTP_200_OK)
         except(jwt.exceptions.ExpiredSignatureError):
             # 토큰 만료 시 토큰 갱신
@@ -342,15 +318,17 @@ class PostView(APIView):
                 pk = payload.get('user_id')
                 user = get_object_or_404(User, pk=pk)
 
-                if not user:
-                    return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
                 try:
                     post = Post.objects.get(pk=post_pk)
                 except Post.DoesNotExist:
-                    return Response({'error': '해당 글을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+                    return Response({'messsage': '해당 글을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
                 data = PostSerializer(post).data
                 data.pop("writer")
+                is_like = False
+                if str(user) in data["likes"]:
+                    is_like = True    
                 data.pop("likes")
+                data["is_like"] = is_like
                 data["token"] = {
                                     "access": access,
                                     "refresh": refresh
@@ -367,16 +345,14 @@ class PostView(APIView):
             payload = jwt.decode(access,SECRET_KEY,algorithms=['HS256'])
             pk = payload.get('user_id')
             user = get_object_or_404(User, pk=pk)
-            if not user:
-                return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
 
             try:
                 post = Post.objects.get(pk=post_pk)
             except Post.DoesNotExist:
-                return Response({'error': '해당 글을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'message': '해당 글을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
             
             if post.writer != user:
-                return Response({'error': '글 수정 권한이 없습니다.'}, status=status.HTTP_403_FORBIDDEN)
+                return Response({'message': '글 수정 권한이 없습니다.'}, status=status.HTTP_403_FORBIDDEN)
 
             serializer = PostSerializer(post, data=request.data,partial=True)
             if serializer.is_valid():
@@ -384,7 +360,7 @@ class PostView(APIView):
                 data = serializer.data
                 data.pop("writer")
                 data.pop("likes")
-                return Response(data)
+                return Response(data,status=status.HTTP_200_OK)
             return Response({'error': '글 수정에 실패하였습니다.'}, status=status.HTTP_400_BAD_REQUEST)
         
         except(jwt.exceptions.ExpiredSignatureError):
@@ -396,8 +372,6 @@ class PostView(APIView):
                 payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
                 pk = payload.get('user_id')
                 user = get_object_or_404(User, pk=pk)
-                if not user:
-                    return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
 
                 try:
                     post = Post.objects.get(pk=post_pk)
@@ -417,7 +391,7 @@ class PostView(APIView):
                                         "access": access,
                                         "refresh": refresh
                                     }
-                    return Response(data)
+                    return Response(data,status=status.HTTP_200_OK)
                 return Response({'error': '글 수정에 실패하였습니다.'}, status=status.HTTP_400_BAD_REQUEST)
             return res
     def delete(self, request, post_pk):
@@ -430,8 +404,6 @@ class PostView(APIView):
             payload = jwt.decode(access,SECRET_KEY,algorithms=['HS256'])
             pk = payload.get('user_id')
             user = get_object_or_404(User, pk=pk)
-            if not user:
-                return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
 
             try:
                 post = Post.objects.get(pk=post_pk)
@@ -442,7 +414,7 @@ class PostView(APIView):
                 return Response({'error': '글 삭제 권한이 없습니다.'}, status=status.HTTP_403_FORBIDDEN)
 
             post.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response(status=status.HTTP_200_OK)
         except(jwt.exceptions.ExpiredSignatureError):
             # 토큰 만료 시 토큰 갱신
             res = token_refresh(request.COOKIES.get('refresh', None))
@@ -452,8 +424,6 @@ class PostView(APIView):
                 payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
                 pk = payload.get('user_id')
                 user = get_object_or_404(User, pk=pk)
-                if not user:
-                    return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
 
                 try:
                     post = Post.objects.get(pk=post_pk)
@@ -470,7 +440,7 @@ class PostView(APIView):
                             "refresh": refresh
                         }
                 }
-                return Response(data,status=status.HTTP_204_NO_CONTENT)
+                return Response(data,status=status.HTTP_200_OK)
             return res
 
 @api_view(['GET'])

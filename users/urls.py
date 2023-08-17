@@ -12,11 +12,14 @@ urlpatterns = [
     path('api/check/id/',checkDuplicatedID,name='check_id'),
     path('api/check/nickname/',checkDuplicatedNickname,name='check_Name'),
     path('api/get/nickname/',getNickname,name='get_nickname'),
+
     path('userinfo/',UserinfoView.as_view(),name='get_userinfo'),
     path('userinfo/changepassword/',changePassword,name='change_password'),
-    path('userinfo/forget_id/',ForgetIDView.as_view(),name='forget_id'),
-    path('userinfo/forget_password/',ForgetPasswordView.as_view(),name='forget_password'),
     path('userinfo/myposts/',myPosts,name='myposts'),
     path('userinfo/mycomments/',myComments,name='mycomments'),
     path('userinfo/mylikes/',myLikes,name='mylikes'),
+
+    path('forget_id/',ForgetIDView.as_view(),name='forget_id'),
+    path('forget_password/',ForgetPasswordView.as_view(),name='forget_password'),
+
 ]

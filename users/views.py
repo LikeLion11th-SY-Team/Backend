@@ -12,7 +12,7 @@ from django.shortcuts import get_object_or_404
 from django.core.mail import EmailMessage
 from config.settings import SECRET_KEY,EMAIL_HOST_USER
 from posts.models import Post,Comment
-from posts.serializers import CommentListSerializer
+from posts.serializers import CommentListSerializer,PostListSerializer
 
 def token_refresh(refresh):
     if refresh:
@@ -25,9 +25,9 @@ def token_refresh(refresh):
                 'refresh': str(refresh)
             }, status=status.HTTP_200_OK)
         except Exception as e:
-            return Response({'error': 'Invalid refresh token'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'message': 'Invalid refresh token'}, status=status.HTTP_400_BAD_REQUEST)
     else:
-        return Response({'error': 'Refresh token not provided'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'message': 'Refresh token not provided'}, status=status.HTTP_400_BAD_REQUEST)
 
 class SignupView(APIView):
     def post(self, request):
@@ -246,18 +246,20 @@ class UserinfoView(APIView):
             pk = payload.get('user_id')
             user = get_object_or_404(User, pk=pk)
             data=request.data
-            phone_number = data['phone_number']
-            email        = data['email']
-            if phone_number != "" and User.objects.filter(phone_number=phone_number).exists():
+            phone_number = request.POST.get('phone_number', default=None)
+            email        = request.POST.get('email', default=None)
+            if phone_number and User.objects.filter(phone_number=phone_number).exists():
                 return Response(
                     {"message":"Duplicate_PhoneNumber"},
                     status = status.HTTP_400_BAD_REQUEST
                 )
-            elif email != "" and User.objects.filter(email=email).exists():
+            elif email and User.objects.filter(email=email).exists():
                 return Response(
                     {"message":"Duplicate_UserEmail"},
                     status = status.HTTP_400_BAD_REQUEST
                 )
+            
+            
             serializer = UserModelSerializer(instance=user,data=data, partial=True)
             serializer.is_valid(raise_exception=True)
             serializer.save()
@@ -271,6 +273,32 @@ class UserinfoView(APIView):
                 payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
                 pk = payload.get('user_id')
                 user = get_object_or_404(User, pk=pk)
+                data=request.data
+                phone_number = request.POST.get('phone_number', default=None)
+                email        = request.POST.get('email', default=None)
+                if phone_number and User.objects.filter(phone_number=phone_number).exists():
+                    return Response(
+                        {
+                            "message":"Duplicate_PhoneNumber",
+                            "token":{
+                                "access":access,
+                                "refresh":refresh
+                            }
+                        },
+                        status = status.HTTP_400_BAD_REQUEST
+                    )
+                elif email and User.objects.filter(email=email).exists():
+                    return Response(
+                        {
+                            "message":"Duplicate_UserEmail",
+                            "token":{
+                                "access":access,
+                                "refresh":refresh
+                            }
+                        },
+                        status = status.HTTP_400_BAD_REQUEST
+                    )
+                
                 serializer = UserModelSerializer(instance=user)
                 serializer.is_valid(raise_exception=True)
                 serializer.save()
