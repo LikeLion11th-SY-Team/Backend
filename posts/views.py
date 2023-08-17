@@ -22,24 +22,6 @@ e
 ### CRUD 구현
 ### 게시판 분류를 어떻게 할 지 정해야 시작가능할 듯
 ### url로 나눌 것인지, ?category={id} 등으로 받아올 것인지...
-@api_view(['GET'])
-def Posts(request):
-    category = request.GET['category']
-    if category!='free' or category!='info':
-        return Response(status=status.HTTP_404_NOT_FOUND)
-    post_list = Post.objects.filter(category=category)
-    posts = []
-    for post in post_list:
-        posts.append(PostListSerializer(instance=post).data)
-        posts[-1].pop('writer')
-        posts[-1].pop('likes')
-    return Response(
-        {
-            "message": "Success",
-            'posts': posts
-        },
-        status=status.HTTP_200_OK
-    )
 
 class CommentView(APIView):
     def post(self, request, post_pk):
