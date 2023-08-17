@@ -15,11 +15,14 @@ class CommentCreateSerializer(serializers.ModelSerializer):
         read_only_fields = ["post","commenter"]
 
 class PostSerializer(serializers.ModelSerializer):
-    user = UserModelSerializer(read_only=True)
+    writer = UserModelSerializer(read_only=True)
+    writer_nickname = serializers.CharField(source='writer.nick_name',read_only=True)
     comments = CommentSerializer(many=True, read_only=True)
+    likes = serializers.StringRelatedField(many=True)
+    likes_count = serializers.IntegerField(source='likes.count',read_only=True)
     class Meta:
         model = models.Post
-        fields = ["pk","writer","title","contents","created_at","updated_at","view_count","likes","comments"]
+        fields = ["pk","title","writer","writer_nickname","contents","created_at","updated_at","likes_count","comments","likes","category"]
 
 class PostListSerializer(PostSerializer):
     writer = serializers.StringRelatedField()

@@ -221,72 +221,261 @@ class CommentView(APIView):
             raise jwt.exceptions.InvalidTokenError
 
 class PostView(APIView):
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
-
     def get(self, request, category):
-        user, access = handle_token(request)
-        if not user:
-            return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
+        try:
+            # 유저 정보 체크 부분
+            token = request.COOKIES.get('access',False)
+            if token:
+                token = str(token).encode("utf-8")
+            access = token
+            payload = jwt.decode(access,SECRET_KEY,algorithms=['HS256'])
+            pk = payload.get('user_id')
+            user = get_object_or_404(User, pk=pk)
+            if not user:
+                return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        posts = Post.objects.filter(category=category)
-        serializer = PostSerializer(posts, many=True)
-        return Response(serializer.data)
+            posts = Post.objects.filter(category=category)
+            data = PostSerializer(posts, many=True).data
+            for post in data:
+                post.pop('writer')
+                post.pop('likes')
+                post.pop('contents')
+                post.pop('category')
 
+            return Response(data)
+        except(jwt.exceptions.ExpiredSignatureError):
+            # 토큰 만료 시 토큰 갱신
+            res = token_refresh(request.COOKIES.get('refresh', None))
+            if res.status_code==200:
+                access = res.data["access"]
+                refresh = res.data["refresh"]
+                payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
+                pk = payload.get('user_id')
+                user = get_object_or_404(User, pk=pk)
+                
+                posts = Post.objects.filter(category=category)
+                data = PostSerializer(posts, many=True).data
+                for post in data:
+                    post.pop('writer')
+                    post.pop('likes')
+                    post.pop('contents')
+                    post.pop('category')
+                res = Response(data)
+            return res
+                
     def post(self, request):
-        user, access = handle_token(request)
-        if not user:
-            return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
+        try:
+            # 유저 정보 체크 부분
+            token = request.COOKIES.get('access',False)
+            if token:
+                token = str(token).encode("utf-8")
+            access = token
+            payload = jwt.decode(access,SECRET_KEY,algorithms=['HS256'])
+            pk = payload.get('user_id')
+            user = get_object_or_404(User, pk=pk)
+            if not user:
+                return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        serializer = PostSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(writer=user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response({'error': '글 작성에 실패하였습니다.'}, status=status.HTTP_400_BAD_REQUEST)
+            serializer = PostSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save(writer=user)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response({'error': '글 작성에 실패하였습니다.'}, status=status.HTTP_400_BAD_REQUEST)
+        except(jwt.exceptions.ExpiredSignatureError):
+            # 토큰 만료 시 토큰 갱신
+            res = token_refresh(request.COOKIES.get('refresh', None))
+            if res.status_code==200:
+                access = res.data["access"]
+                refresh = res.data["refresh"]
+                payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
+                pk = payload.get('user_id')
+                user = get_object_or_404(User, pk=pk)
+
+                serializer = PostSerializer(data=request.data)
+                if serializer.is_valid():
+                    serializer.save(writer=user)
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response({'error': '글 작성에 실패하였습니다.'}, status=status.HTTP_400_BAD_REQUEST)
+            return res
+    
+    @api_view(['GET'])
     def view_detail(self, request, post_pk):
-        user, access = handle_token(request)
-        if not user:
-            return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
-
         try:
-            post = Post.objects.get(pk=post_pk)
-        except Post.DoesNotExist:
-            return Response({'error': '해당 글을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
-        
-        serializer = PostSerializer(post)
-        return Response(serializer.data)
-
-    def put(self, request, post_pk):
-        user, access = handle_token(request)
-        if not user:
-            return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
-
-        try:
-            post = Post.objects.get(pk=post_pk)
-        except Post.DoesNotExist:
-            return Response({'error': '해당 글을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
-        
-        if post.writer != user:
-            return Response({'error': '글 수정 권한이 없습니다.'}, status=status.HTTP_403_FORBIDDEN)
-
-        serializer = PostSerializer(post, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
+            # 유저 정보 체크 부분
+            token = request.COOKIES.get('access',False)
+            if token:
+                token = str(token).encode("utf-8")
+            access = token
+            payload = jwt.decode(access,SECRET_KEY,algorithms=['HS256'])
+            pk = payload.get('user_id')
+            user = get_object_or_404(User, pk=pk)
+            if not user:
+                return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
+            try:
+                post = Post.objects.get(pk=post_pk)
+            except Post.DoesNotExist:
+                return Response({'error': '해당 글을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+            
+            serializer = PostSerializer(post)
             return Response(serializer.data)
-        return Response({'error': '글 수정에 실패하였습니다.'}, status=status.HTTP_400_BAD_REQUEST)
+        except(jwt.exceptions.ExpiredSignatureError):
+            # 토큰 만료 시 토큰 갱신
+            res = token_refresh(request.COOKIES.get('refresh', None))
+            if res.status_code==200:
+                access = res.data["access"]
+                refresh = res.data["refresh"]
+                payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
+                pk = payload.get('user_id')
+                user = get_object_or_404(User, pk=pk)
 
-    def delete(self, request, post_pk):
-        user, access = handle_token(request)
-        if not user:
-            return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
-
+                serializer = PostSerializer(data=request.data)
+                if serializer.is_valid():
+                    serializer.save(writer=user)
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response({'error': '글 작성에 실패하였습니다.'}, status=status.HTTP_400_BAD_REQUEST)
+            return res
+    def put(self, request, post_pk):
         try:
-            post = Post.objects.get(pk=post_pk)
-        except Post.DoesNotExist:
-            return Response({'error': '해당 글을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
-        
-        if post.writer != user:
-            return Response({'error': '글 삭제 권한이 없습니다.'}, status=status.HTTP_403_FORBIDDEN)
+            # 유저 정보 체크 부분
+            token = request.COOKIES.get('access',False)
+            if token:
+                token = str(token).encode("utf-8")
+            access = token
+            payload = jwt.decode(access,SECRET_KEY,algorithms=['HS256'])
+            pk = payload.get('user_id')
+            user = get_object_or_404(User, pk=pk)
+            if not user:
+                return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        post.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+            try:
+                post = Post.objects.get(pk=post_pk)
+            except Post.DoesNotExist:
+                return Response({'error': '해당 글을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+            
+            if post.writer != user:
+                return Response({'error': '글 수정 권한이 없습니다.'}, status=status.HTTP_403_FORBIDDEN)
+
+            serializer = PostSerializer(post, data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response({'error': '글 수정에 실패하였습니다.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        except(jwt.exceptions.ExpiredSignatureError):
+            # 토큰 만료 시 토큰 갱신
+            res = token_refresh(request.COOKIES.get('refresh', None))
+            if res.status_code==200:
+                access = res.data["access"]
+                refresh = res.data["refresh"]
+                payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
+                pk = payload.get('user_id')
+                user = get_object_or_404(User, pk=pk)
+                if not user:
+                    return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
+
+                try:
+                    post = Post.objects.get(pk=post_pk)
+                except Post.DoesNotExist:
+                    return Response({'error': '해당 글을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+                
+                if post.writer != user:
+                    return Response({'error': '글 수정 권한이 없습니다.'}, status=status.HTTP_403_FORBIDDEN)
+
+                serializer = PostSerializer(post, data=request.data)
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(serializer.data)
+                return Response({'error': '글 수정에 실패하였습니다.'}, status=status.HTTP_400_BAD_REQUEST)
+            return res
+    def delete(self, request, post_pk):
+        try:
+            # 유저 정보 체크 부분
+            token = request.COOKIES.get('access',False)
+            if token:
+                token = str(token).encode("utf-8")
+            access = token
+            payload = jwt.decode(access,SECRET_KEY,algorithms=['HS256'])
+            pk = payload.get('user_id')
+            user = get_object_or_404(User, pk=pk)
+            if not user:
+                return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
+
+            try:
+                post = Post.objects.get(pk=post_pk)
+            except Post.DoesNotExist:
+                return Response({'error': '해당 글을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+            
+            if post.writer != user:
+                return Response({'error': '글 삭제 권한이 없습니다.'}, status=status.HTTP_403_FORBIDDEN)
+
+            post.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except(jwt.exceptions.ExpiredSignatureError):
+            # 토큰 만료 시 토큰 갱신
+            res = token_refresh(request.COOKIES.get('refresh', None))
+            if res.status_code==200:
+                access = res.data["access"]
+                refresh = res.data["refresh"]
+                payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
+                pk = payload.get('user_id')
+                user = get_object_or_404(User, pk=pk)
+                if not user:
+                    return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
+
+                try:
+                    post = Post.objects.get(pk=post_pk)
+                except Post.DoesNotExist:
+                    return Response({'error': '해당 글을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+                
+                if post.writer != user:
+                    return Response({'error': '글 삭제 권한이 없습니다.'}, status=status.HTTP_403_FORBIDDEN)
+
+                post.delete()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            return res
+
+@api_view(['GET'])
+def like_post(request, post_pk):
+    try:
+        # 유저 정보 체크 부분
+        token = request.COOKIES.get('access',False)
+        if token:
+            token = str(token).encode("utf-8")
+        access = token
+        payload = jwt.decode(access,SECRET_KEY,algorithms=['HS256'])
+        pk = payload.get('user_id')
+        user = get_object_or_404(User, pk=pk)
+        
+        #좋아요 부분
+        post = get_object_or_404(Post, pk=post_pk)
+        if user in post.likes.all():
+            post.likes.remove(user)
+        else:
+            post.likes.add(user)
+        return Response({"message":"Success"},status=status.HTTP_200_OK)
+    except(jwt.exceptions.ExpiredSignatureError):
+        # 토큰 만료 시 토큰 갱신
+        res = token_refresh(request.COOKIES.get('refresh', None))
+        if res.status_code==200:
+            access = res.data["access"]
+            refresh = res.data["refresh"]
+            payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
+            pk = payload.get('user_id')
+            user = get_object_or_404(User, pk=pk)
+
+            post = get_object_or_404(Post, pk=post_pk)
+            if user in post.likes.all():
+                post.likes.remove(user)
+            else:
+                post.likes.add(user)
+            res = Response(
+                {
+                    "message":"Success",
+                    "token": {
+                        "access": access,
+                        "refresh": refresh,
+                    },
+                },
+                status=status.HTTP_200_OK
+            )
+        return res
