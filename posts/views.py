@@ -213,6 +213,54 @@ class CommentView(APIView):
                     )
             raise jwt.exceptions.InvalidTokenError
 
+
+@api_view(['GET'])
+def like_post(request, post_pk):
+    try:
+        # 유저 정보 체크 부분
+        token = request.COOKIES.get('access',False)
+        if token:
+            token = str(token).encode("utf-8")
+        access = token
+        payload = jwt.decode(access,SECRET_KEY,algorithms=['HS256'])
+        pk = payload.get('user_id')
+        user = get_object_or_404(User, pk=pk)
+        
+        #좋아요 부분
+        post = get_object_or_404(Post, pk=post_pk)
+        if user in post.likes.all():
+            post.likes.remove(user)
+        else:
+            post.likes.add(user)
+        return Response({"message":"Success"},status=status.HTTP_200_OK)
+    except(jwt.exceptions.ExpiredSignatureError):
+        # 토큰 만료 시 토큰 갱신
+        data = {'refresh': request.COOKIES.get('refresh', None)}
+        serializer = TokenRefreshSerializer(data=data)
+        if serializer.is_valid(raise_exception=True):
+            access = serializer.data.get('access', None)
+            refresh = serializer.data.get('refresh', None)
+            payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
+            pk = payload.get('user_id')
+            user = get_object_or_404(User, pk=pk)
+
+            post = get_object_or_404(Post, pk=post_pk)
+            if user in post.likes.all():
+                post.likes.remove(user)
+            else:
+                post.likes.add(user)
+            return Response(
+                {
+                    "message":"Success",
+                    "token": {
+                        "access": access,
+                        "refresh": refresh,
+                    },
+                },
+                status=status.HTTP_200_OK
+            )
+        raise jwt.exceptions.InvalidTokenError
+
 class PostView(APIView):
     @staticmethod
     @api_view(['GET'])
