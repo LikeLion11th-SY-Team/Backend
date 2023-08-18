@@ -22,6 +22,7 @@ from rest_framework.decorators import api_view, permission_classes
 ### url로 나눌 것인지, ?category={id} 등으로 받아올 것인지...
 
 class CommentView(APIView):
+    
     def post(self, request, post_pk):
         try:
             # 유저 정보 체크 부분

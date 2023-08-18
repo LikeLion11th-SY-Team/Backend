@@ -28,4 +28,5 @@ urlpatterns = [
     path('password_reset_complete/', auth_views.PasswordResetCompleteView.as_view(), name="password_reset_complete"),
     path('auth/', include("login.urls")),
     path('community/', include("posts.urls")),
+    path('progress/', include("learnings.urls")),
 ]
