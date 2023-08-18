@@ -14,15 +14,20 @@ from config.settings import SECRET_KEY,EMAIL_HOST_USER
 from posts.models import Post,Comment
 from posts.serializers import CommentListSerializer,PostListSerializer
 
+@api_view(['GET'])
 def token_refresh(refresh):
     if refresh:
         try:
             refresh = RefreshToken(refresh)
             access = refresh.access_token
 
-            return Response({
-                'access': str(access),
-                'refresh': str(refresh)
+            return Response(
+                {
+                    "token": 
+                        {
+                            'access': str(access),
+                            'refresh': str(refresh)
+                        }
             }, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'message': 'Invalid refresh token'}, status=status.HTTP_400_BAD_REQUEST)
@@ -71,7 +76,7 @@ class UserAPIView(APIView):
     # 토큰으로 로그인
     def get(self, request):
         try:
-            token = request.META.get('Authorization',False)
+            token = request.META.get('HTTP_AUTHORIZATION',False)[7:]
             if token:
                 token = str(token).encode("utf-8")
             access = token
@@ -169,7 +174,7 @@ def checkDuplicatedNickname(request):
 def getNickname(request):
     if request.method == 'GET':
         try:
-            token = request.COOKIES.get('access',False)
+            token = request.META.get('HTTP_AUTHORIZATION',False)[7:]
             if token:
                 token = str(token).encode("utf-8")
             access = token
@@ -205,7 +210,7 @@ def getNickname(request):
 class UserinfoView(APIView):
     def get(self, request):
         try:
-            token = request.COOKIES.get('access',False)
+            token = request.META.get('HTTP_AUTHORIZATION',False)[7:]
             if token:
                 token = str(token).encode("utf-8")
             access = token
@@ -238,7 +243,7 @@ class UserinfoView(APIView):
             return res
     def patch(self, request):
         try:
-            token = request.COOKIES.get('access',False)
+            token = request.META.get('HTTP_AUTHORIZATION',False)[7:]
             if token:
                 token = str(token).encode("utf-8")
             access = token
@@ -317,7 +322,7 @@ class UserinfoView(APIView):
 @api_view(['POST']) 
 def changePassword(request):
     try:
-        token = request.COOKIES.get('access',False)
+        token = request.META.get('HTTP_AUTHORIZATION',False)[7:]
         if token:
             token = str(token).encode("utf-8")
         access = token
@@ -381,7 +386,7 @@ def changePassword(request):
 @api_view(['GET'])
 def myPosts(request):
     try:
-        token = request.COOKIES.get('access',False)
+        token = request.META.get('HTTP_AUTHORIZATION',False)[7:]
         if token:
             token = str(token).encode("utf-8")
         access = token
@@ -429,7 +434,7 @@ def myPosts(request):
 @api_view(['GET'])
 def myComments(request):
     try:
-        token = request.COOKIES.get('access',False)
+        token = request.META.get('HTTP_AUTHORIZATION',False)[7:]
         if token:
             token = str(token).encode("utf-8")
         access = token
@@ -480,7 +485,7 @@ def myComments(request):
 @api_view(['GET'])
 def myLikes(request):
     try:
-        token = request.COOKIES.get('access',False)
+        token = request.META.get('HTTP_AUTHORIZATION',False)[7:]
         if token:
             token = str(token).encode("utf-8")
         access = token

@@ -25,7 +25,7 @@ class CommentView(APIView):
     def post(self, request, post_pk):
         try:
             # 유저 정보 체크 부분
-            token = request.COOKIES.get('access',False)
+            token = request.META.get('HTTP_AUTHORIZATION',False)[7:]
             if token:
                 token = str(token).encode("utf-8")
             access = token
@@ -95,7 +95,7 @@ class CommentView(APIView):
     def put(self, request, comment_pk):
         try:
             # 유저 정보 체크 부분
-            token = request.COOKIES.get('access',False)
+            token = request.META.get('HTTP_AUTHORIZATION',False)[7:]
             if token:
                 token = str(token).encode("utf-8")
             access = token
@@ -159,7 +159,7 @@ class CommentView(APIView):
     def delete(self, request, comment_pk):
         try:
             # 유저 정보 체크 부분
-            token = request.COOKIES.get('access',False)
+            token = request.META.get('HTTP_AUTHORIZATION',False)[7:]
             if token:
                 token = str(token).encode("utf-8")
             access = token
@@ -233,7 +233,7 @@ class PostView(APIView):
     def post(self, request):
         try:
             # 유저 정보 체크 부분
-            token = request.COOKIES.get('access',False)
+            token = request.META.get('HTTP_AUTHORIZATION',False)[7:]
             if token:
                 token = str(token).encode("utf-8")
             access = token
@@ -285,7 +285,7 @@ class PostView(APIView):
     
     @api_view(['GET'])
     def view_detail(request, post_pk):
-        token = request.COOKIES.get('access',False)
+        token = request.META.get('HTTP_AUTHORIZATION',False)[7:]
         if token:
             token = str(token).encode("utf-8")
         else:
@@ -350,7 +350,7 @@ class PostView(APIView):
     def put(self, request, post_pk):
         try:
             # 유저 정보 체크 부분
-            token = request.COOKIES.get('access',False)
+            token = request.META.get('HTTP_AUTHORIZATION',False)[7:]
             if token:
                 token = str(token).encode("utf-8")
             access = token
@@ -409,7 +409,7 @@ class PostView(APIView):
     def delete(self, request, post_pk):
         try:
             # 유저 정보 체크 부분
-            token = request.COOKIES.get('access',False)
+            token = request.META.get('HTTP_AUTHORIZATION',False)[7:]
             if token:
                 token = str(token).encode("utf-8")
             access = token
@@ -459,7 +459,7 @@ class PostView(APIView):
 def like_post(request, post_pk):
     try:
         # 유저 정보 체크 부분
-        token = request.COOKIES.get('access',False)
+        token = request.META.get('HTTP_AUTHORIZATION',False)[7:]
         if token:
             token = str(token).encode("utf-8")
         access = token
