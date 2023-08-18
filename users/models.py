@@ -43,25 +43,8 @@ class User(AbstractUser):
     
     is_reseted = models.BooleanField("비밀번호 초기화됨",default=False)
 
-    BOOKMARK = 0
-    SIGNUP = 1
-    LOGIN = 2
-    COMMUNITY = 3
-    WRITE = 4
-    COMMUNICATE = 5
-    MYPAGE = 6
-    PROGRESS_CHOICES = [
-        (BOOKMARK, "Bookmark"),
-        (SIGNUP, "Signup"),
-        (LOGIN, "Login"),
-        (COMMUNITY, "Community"),
-        (WRITE, "Write"),
-        (COMMUNICATE, "Communicate"),
-        (MYPAGE,"Mypage"),
-    ]
     progress = models.IntegerField(
-        choices=PROGRESS_CHOICES,
-        default=BOOKMARK,
+        default=0
     )
 
     REQUIRED_FIELDS = []

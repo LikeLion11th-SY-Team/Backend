@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'corsheaders',
     'posts',
+    'learnings',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
