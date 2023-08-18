@@ -72,13 +72,14 @@ MIDDLEWARE = [
 
 CORS_ORIGIN_WHITELIST = [
                             'http://127.0.0.1:3000',
+                            'http://127.0.0.1:8000',
                             'http://localhost:3000',
                             'http://localhost:8000', 
                             #'https://testmate.vercel.app',
                         ]
 CORS_ALLOW_CREDENTIALS = True
 
-CORS_ALLOW_HEADERS = list(default_headers) + ['x-csrftoken']
+#CORS_ALLOW_HEADERS = list(default_headers) + ['x-csrftoken']
 #CSRF_TRUSTED_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000", 'https://testmate.vercel.app',]
 ROOT_URLCONF = 'config.urls'
 
