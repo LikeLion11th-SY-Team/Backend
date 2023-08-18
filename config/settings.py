@@ -186,6 +186,7 @@ ALLOWED_HOSTS = [
     'ec2-13-125-121-158.ap-northeast-2.compute.amazonaws.com',
     '.한걸음씩.o-r.kr',
     '.xn--369a718b4pbn1y.o-r.kr',
+    'www.shadowserver.org',
     # 프론트 배포 앱 주소,
 ]
 
