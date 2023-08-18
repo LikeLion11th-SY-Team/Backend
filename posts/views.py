@@ -285,11 +285,23 @@ class PostView(APIView):
     
     @api_view(['GET'])
     def view_detail(request, post_pk):
+        token = request.COOKIES.get('access',False)
+        if token:
+            token = str(token).encode("utf-8")
+        else:
+            try:
+                post = Post.objects.get(pk=post_pk)
+            except Post.DoesNotExist:
+                return Response({'message': '해당 글을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+
+            data = PostSerializer(post).data
+            data.pop("writer")
+            is_like = False
+            data.pop("likes")
+            data["is_like"] = is_like
+            return Response(data,status=status.HTTP_200_OK)
         try:
             # 유저 정보 체크 부분
-            token = request.COOKIES.get('access',False)
-            if token:
-                token = str(token).encode("utf-8")
             access = token
             payload = jwt.decode(access,SECRET_KEY,algorithms=['HS256'])
             pk = payload.get('user_id')
