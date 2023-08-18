@@ -71,7 +71,7 @@ class UserAPIView(APIView):
     # 토큰으로 로그인
     def get(self, request):
         try:
-            token = request.COOKIES.get('access',False)
+            token = request.META.get('Authorization',False)
             if token:
                 token = str(token).encode("utf-8")
             access = token
