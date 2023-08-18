@@ -125,7 +125,6 @@ class PostView(APIView):
     def get(self, request, category):
         posts = Post.objects.filter(category=category)
         data = PostSerializer(posts, many=True).data
-        print(data)
         for post in data:
             post.pop('writer')
             post.pop('likes')
