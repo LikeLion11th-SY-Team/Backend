@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404
 from config.settings import SECRET_KEY
 
 from .models import Post,Comment
-from .serializers import PostSerializer,CommentCreateSerializer,CommentSerializer,PostCreateSerializer
+from .serializers import PostSerializer,CommentCreateSerializer,CommentSerializer,PostCreateSerializer,CommentListSerializer
 from users.models import User
 from users.views import token_refresh
 
@@ -22,7 +22,16 @@ from rest_framework.decorators import api_view, permission_classes
 ### url로 나눌 것인지, ?category={id} 등으로 받아올 것인지...
 
 class CommentView(APIView):
-    
+    def get(self, request, post_pk):
+        post = get_object_or_404(Post,pk=post_pk)
+        comment_list = Comment.objects.filter(post=post)
+        comments = []
+        for comment in comment_list:
+            comments.append(CommentListSerializer(instance=comment).data)
+            comments[-1].pop('commenter')
+            comments[-1].pop('post')
+        return Response(comments,status=status.HTTP_200_OK)
+
     def post(self, request, post_pk):
         try:
             # 유저 정보 체크 부분
