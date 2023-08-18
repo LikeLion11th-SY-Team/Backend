@@ -31,7 +31,8 @@ pymysql.install_as_MySQLdb()
 SECRET_KEY = env('SECRET_KEY')
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
-
+KAKAO_CLIENT_ID = env('KAKAO_CLIENT_ID')
+KAKAO_REDIRECT_URI = env('KAKAO_REDIRECT_URI')
 
 DEBUG = True
 
