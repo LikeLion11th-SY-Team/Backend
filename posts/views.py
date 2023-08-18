@@ -55,6 +55,7 @@ class CommentView(APIView):
         
         except(jwt.exceptions.ExpiredSignatureError):
             # 토큰 만료 시 토큰 갱신
+            return Response({"message" : "You need to refresh"},status=status.HTTP_400_BAD_REQUEST)
             res = token_refresh(request.COOKIES.get('refresh', None))
             if res.status_code==200:
                 access = res.data["access"]
@@ -118,6 +119,7 @@ class CommentView(APIView):
         
         except(jwt.exceptions.ExpiredSignatureError):
             # 토큰 만료 시 토큰 갱신
+            return Response({"message" : "You need to refresh"},status=status.HTTP_400_BAD_REQUEST)
             res = token_refresh(request.COOKIES.get('refresh', None))
             if res.status_code==200:
                 access = res.data["access"]
@@ -185,6 +187,7 @@ class CommentView(APIView):
                 )
         except(jwt.exceptions.ExpiredSignatureError):
             # 토큰 만료 시 토큰 갱신
+            return Response({"message" : "You need to refresh"},status=status.HTTP_400_BAD_REQUEST)
             res = token_refresh(request.COOKIES.get('refresh', None))
             if res.status_code==200:
                 access = res.data["access"]
@@ -251,6 +254,7 @@ class PostView(APIView):
                 return Response(data, status=status.HTTP_200_OK)
             return Response({"message": "글 작성에 실패하였습니다."}, status=status.HTTP_400_BAD_REQUEST)
         except(jwt.exceptions.ExpiredSignatureError):
+            return Response({"message" : "You need to refresh"},status=status.HTTP_400_BAD_REQUEST)
             # 토큰 만료 시 토큰 갱신
             res = token_refresh(request.COOKIES.get('refresh', None))
             if res.status_code==200:
@@ -321,6 +325,7 @@ class PostView(APIView):
             data["is_like"] = is_like
             return Response(data,status=status.HTTP_200_OK)
         except(jwt.exceptions.ExpiredSignatureError):
+            return Response({"message" : "You need to refresh"},status=status.HTTP_400_BAD_REQUEST)
             # 토큰 만료 시 토큰 갱신
             res = token_refresh(request.COOKIES.get('refresh', None))
             if res.status_code==200:
@@ -376,6 +381,7 @@ class PostView(APIView):
             return Response({'error': '글 수정에 실패하였습니다.'}, status=status.HTTP_400_BAD_REQUEST)
         
         except(jwt.exceptions.ExpiredSignatureError):
+            return Response({"message" : "You need to refresh"},status=status.HTTP_400_BAD_REQUEST)
             # 토큰 만료 시 토큰 갱신
             res = token_refresh(request.COOKIES.get('refresh', None))
             if res.status_code==200:
@@ -429,6 +435,7 @@ class PostView(APIView):
             return Response(status=status.HTTP_200_OK)
         except(jwt.exceptions.ExpiredSignatureError):
             # 토큰 만료 시 토큰 갱신
+            return Response({"message" : "You need to refresh"},status=status.HTTP_400_BAD_REQUEST)
             res = token_refresh(request.COOKIES.get('refresh', None))
             if res.status_code==200:
                 access = res.data["access"]
@@ -476,6 +483,7 @@ def like_post(request, post_pk):
         return Response({"message":"Success"},status=status.HTTP_200_OK)
     except(jwt.exceptions.ExpiredSignatureError):
         # 토큰 만료 시 토큰 갱신
+        return Response({"message" : "You need to refresh"},status=status.HTTP_400_BAD_REQUEST)
         res = token_refresh(request.COOKIES.get('refresh', None))
         if res.status_code==200:
             access = res.data["access"]
