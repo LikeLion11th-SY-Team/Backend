@@ -4,12 +4,11 @@ from rest_framework import status
 import requests
 from rest_framework_simplejwt.tokens import RefreshToken
 from users.models import User
-# from decouple import config
+from config.settings import KAKAO_CLIENT_ID
+from config.settings import KAKAO_REDIRECT_URI
 import random
 import string
 
-# KAKAO_CLIENT_ID = config('KAKAO_CLIENT_ID')
-# KAKAO_REDIRECT_URI = config('KAKAO_REDIRECT_URI')
 
 def generate_random_nickname():
 
@@ -38,8 +37,8 @@ class KakaoLoginView(APIView):
         # 카카오로 액세스 토큰 요청
         response = requests.post('https://kauth.kakao.com/oauth/token', data={
             'grant_type': 'authorization_code',
-            'client_id': 'dc6d77371b58fce528a75d2f7504577c' ,
-            'redirect_uri': 'http://localhost:3000/auth/api/kakao-login',
+            'client_id': KAKAO_CLIENT_ID ,
+            'redirect_uri': KAKAO_REDIRECT_URI,
             'code': authorization_code,
         })
 
