@@ -114,7 +114,8 @@ DATABASES = {
         'PORT': env('PORT'),
         'NAME' : env('DB_NAME'),
         'USER': env('MYSQL_USER'),
-        'PASSWORD': env('MYSQL_PASSWORD')
+        'PASSWORD': env('MYSQL_PASSWORD'),
+        
     }
 }
 
@@ -191,6 +192,8 @@ ALLOWED_HOSTS = [
     '.한걸음씩.o-r.kr',
     '.xn--369a718b4pbn1y.o-r.kr',
     'www.shadowserver.org',
+    '52.78.142.87',
+    'stepbystep-demo.cahiyncelfz9.ap-southeast-2.rds.amazonaws.com',
     # 프론트 배포 앱 주소,
 ]
 
