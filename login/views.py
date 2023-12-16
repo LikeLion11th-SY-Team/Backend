@@ -8,7 +8,7 @@ import random
 import string
 
 def generate_random_nickname():
-    # 랜덤한 문자열을 생성하여 닉네임으로 사용
+
     letters = string.ascii_letters
     random_nickname = ''.join(random.choice(letters) for i in range(10))  # 10자리 랜덤 닉네임 생성
     return random_nickname
